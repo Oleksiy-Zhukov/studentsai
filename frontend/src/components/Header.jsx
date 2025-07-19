@@ -176,7 +176,7 @@ export const Header = () => {
               className="p-2"
             >
               <a 
-                href="https://github.com" 
+                href="https://github.com/Oleksiy-Zhukov/students-ai-toolkit" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 aria-label="GitHub Repository"

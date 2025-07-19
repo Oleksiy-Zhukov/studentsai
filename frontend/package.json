@@ -50,6 +50,8 @@
     "react": "^19.1.0",
     "react-day-picker": "8.10.1",
     "react-dom": "^19.1.0",
+    "react-google-recaptcha": "^3.1.0",
+    "react-google-recaptcha-v3": "^1.11.0",
     "react-hook-form": "^7.56.3",
     "react-markdown": "^9.1.0",
     "react-resizable-panels": "^3.0.2",

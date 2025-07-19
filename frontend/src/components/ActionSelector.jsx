@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { AnimatedButton, AnimatedIconButton } from './animated/AnimatedButton'
 import { AnimatedCard } from './animated/AnimatedCard'
+import { RecaptchaWrapper, useRecaptcha } from './RecaptchaWrapper'
 import { useStaggeredAnimation, useReducedMotion } from '@/hooks/useAnimations'
 import { staggerContainer, staggerItem, slideVariants } from '@/animations/variants'
 
@@ -47,6 +48,7 @@ export const ActionSelector = ({
   const [additionalInstructions, setAdditionalInstructions] = useState('')
   const visibleActions = useStaggeredAnimation(actions.length, 0.1)
   const prefersReducedMotion = useReducedMotion()
+  const recaptcha = useRecaptcha()
 
   const handleActionClick = (actionId) => {
     onActionSelect(actionId)
@@ -54,7 +56,7 @@ export const ActionSelector = ({
 
   const handleProcess = () => {
     if (selectedAction && textContent) {
-      onProcess(textContent, selectedAction, additionalInstructions)
+      onProcess(textContent, selectedAction, additionalInstructions, recaptcha.token)
     }
   }
 
@@ -207,6 +209,24 @@ export const ActionSelector = ({
               </div>
             </div>
 
+            {/* reCAPTCHA */}
+            {recaptcha.isEnabled && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex justify-center"
+              >
+                <RecaptchaWrapper
+                  onVerify={recaptcha.handleVerify}
+                  onError={recaptcha.handleError}
+                  onExpire={recaptcha.handleExpire}
+                  size="normal"
+                  theme="light"
+                />
+              </motion.div>
+            )}
+
             {/* Process Button */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -218,7 +238,7 @@ export const ActionSelector = ({
                 icon={Sparkles}
                 size="lg"
                 onClick={handleProcess}
-                disabled={!selectedAction || !textContent || isLoading}
+                disabled={!selectedAction || !textContent || isLoading || (recaptcha.isEnabled && !recaptcha.isVerified)}
                 isLoading={isLoading}
                 className="px-8 py-3 text-lg font-medium"
               >

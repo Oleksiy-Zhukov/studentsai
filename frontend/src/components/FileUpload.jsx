@@ -76,8 +76,9 @@ export const FileUpload = ({ onFileUpload }) => {
 
       const formData = new FormData()
       formData.append('file', selectedFile)
+      formData.append('summarize_background', 'true') // Enable background summarization
 
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await fetch('http://localhost:8000/parse-file', {
         method: 'POST',
         body: formData
       })
@@ -87,12 +88,31 @@ export const FileUpload = ({ onFileUpload }) => {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Upload failed')
+        throw new Error(errorData.detail || 'File parsing failed')
       }
 
       const data = await response.json()
-      setSuccess('File uploaded successfully!')
-      onFileUpload(data.text_content)
+      
+      // Check if background summary is available
+      if (data.summary_available && data.background_summary) {
+        setSuccess('File parsed successfully! AI summary generated for review.')
+        // Use the AI summary instead of raw text for better user experience
+        onFileUpload(data.background_summary, {
+          originalText: data.extracted_text,
+          filename: data.filename,
+          hasSummary: true,
+          summaryUsed: true
+        })
+      } else {
+        setSuccess('File parsed successfully!')
+        // Use extracted text directly
+        onFileUpload(data.extracted_text, {
+          originalText: data.extracted_text,
+          filename: data.filename,
+          hasSummary: false,
+          summaryUsed: false
+        })
+      }
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000)

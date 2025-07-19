@@ -154,7 +154,7 @@ export const AnimatedPulseButton = ({
     animate: { scale: 1 }
   } : {
     animate: {
-      scale: [1, 1, 1],
+      scale: [1, 1.05, 1],
       transition: {
         duration: 2,
         repeat: Infinity,
@@ -177,3 +177,4 @@ export const AnimatedPulseButton = ({
     </motion.div>
   )
 }
+

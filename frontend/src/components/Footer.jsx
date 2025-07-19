@@ -150,7 +150,7 @@ export const Footer = () => {
             
             <div className="flex space-x-3 pt-2">
               <motion.a
-                href="https://github.com"
+                href="https://github.com/Oleksiy-Zhukov/students-ai-toolkit"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary transition-colors"
