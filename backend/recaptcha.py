@@ -22,7 +22,7 @@ class RecaptchaVerifier:
         )
 
     def verify_token(
-        self, token: str, remote_ip: Optional[str] = None
+        self, token: str, remote_ip: Optional[str] = None, action: Optional[str] = None
     ) -> Tuple[bool, Optional[str]]:
         """
         Verify a reCAPTCHA token with Google's API.
@@ -30,6 +30,7 @@ class RecaptchaVerifier:
         Args:
             token: The reCAPTCHA token from the frontend
             remote_ip: Optional client IP address
+            action: Optional action to verify (for v3)
 
         Returns:
             Tuple of (success, error_message)
@@ -62,7 +63,7 @@ class RecaptchaVerifier:
             if result.get("success", False):
                 # v3-specific checks
                 score = result.get("score", 0.0)
-                action = result.get("action", "")
+                response_action = result.get("action", "")
 
                 if score < self.score_threshold:
                     return (
@@ -70,9 +71,12 @@ class RecaptchaVerifier:
                         f"Low reCAPTCHA score ({score}). Potential bot or abuse.",
                     )
 
-                # Optional: Verify action
-                if action and action != self.expected_action:
-                    return False, f"Unexpected reCAPTCHA action: {action}"
+                # Optional: Verify action if provided
+                if action and response_action and response_action != action:
+                    return (
+                        False,
+                        f"Unexpected reCAPTCHA action: {response_action}, expected: {action}",
+                    )
 
                 return True, None
             else:

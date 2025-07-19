@@ -10,16 +10,17 @@ from typing import Literal
 # Load environment variables from .env file
 load_dotenv()
 
+
 class Config:
     """Application configuration class."""
-    
+
     # OpenAI Configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_API_BASE: str = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
-    
+
     # HuggingFace Configuration
     HUGGINGFACE_API_TOKEN: str = os.getenv("HUGGINGFACE_API_TOKEN", "")
-    
+
     # Backend Configuration
     AI_BACKEND: Literal["openai", "huggingface"] = os.getenv("AI_BACKEND", "openai")
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
@@ -28,12 +29,12 @@ class Config:
     # reCAPTCHA Configuration
     RECAPTCHA_SITE_KEY: str = os.getenv("RECAPTCHA_SITE_KEY", "")
     RECAPTCHA_SECRET_KEY: str = os.getenv("RECAPTCHA_SECRET_KEY", "")
-    
+
     # File Upload Configuration
     UPLOAD_FOLDER: str = "uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
-    ALLOWED_EXTENSIONS: set = {'.pdf', '.txt', '.docx'}
-    
+    ALLOWED_EXTENSIONS: set = {".pdf", ".txt", ".docx"}
+
     @classmethod
     def validate_config(cls) -> bool:
         """Validate that required configuration is present."""
@@ -43,6 +44,6 @@ class Config:
             return False
         return True
 
+
 # Create global config instance
 config = Config()
-

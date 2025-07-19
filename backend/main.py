@@ -215,14 +215,41 @@ async def process_content(
 
 
 @app.post("/parse-file", response_model=dict, tags=["AI Processing"])
+@limiter.limit("2/hour")
 async def parse_file(
-    file: UploadFile = File(...), summarize_background: bool = Form(False)
+    request: Request,
+    file: UploadFile = File(...),
+    summarize_background: bool = Form(False),
+    recaptcha_token: Optional[str] = Form(None),
 ):
     """
     Parse a file and extract text content, with optional background summarization.
     Returns extracted text and optionally a summary for user review.
+    Includes reCAPTCHA v3 verification for security.
     """
     try:
+        # reCAPTCHA verification
+        recaptcha_success = True
+        recaptcha_error = None
+
+        # Only validate if recaptcha is enabled and token is provided
+        if recaptcha_verifier.is_enabled() and recaptcha_token:
+            client_ip = request.client.host if request.client else None
+            recaptcha_success, recaptcha_error = recaptcha_verifier.verify_token(
+                recaptcha_token, client_ip, action="file_upload"
+            )
+
+            if not recaptcha_success:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"reCAPTCHA verification failed: {recaptcha_error}",
+                )
+        elif recaptcha_verifier.is_enabled() and not recaptcha_token:
+            raise HTTPException(
+                status_code=400,
+                detail="reCAPTCHA token is required",
+            )
+
         # Validate file
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
