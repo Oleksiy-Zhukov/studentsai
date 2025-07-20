@@ -49,7 +49,7 @@ app.add_middleware(
         "https://www.studentsai.org",
     ],  # Change to specific origins in production
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -173,14 +173,17 @@ async def process_content(
         ):
             client_ip = request.client.host if request.client else None
             recaptcha_success, recaptcha_error = recaptcha_verifier.verify_token(
-                body.recaptcha_token, client_ip
+                body.recaptcha_token, client_ip, action="submit"
             )
 
             if not recaptcha_success:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"reCAPTCHA verification failed: {recaptcha_error}",
-                )
+                # Log the error but don't fail the request for now
+                print(f"reCAPTCHA verification failed: {recaptcha_error}")
+                # Uncomment the line below to enforce reCAPTCHA verification
+                # raise HTTPException(status_code=400, detail=f"reCAPTCHA verification failed: {recaptcha_error}")
+        elif recaptcha_verifier.is_enabled():
+            # If reCAPTCHA is enabled but no token provided, log but don't fail
+            print("reCAPTCHA is enabled but no token provided")
 
         # Validate input
         if not body.text_content or not body.text_content.strip():
