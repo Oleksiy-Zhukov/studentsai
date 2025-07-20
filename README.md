@@ -14,11 +14,13 @@
 ![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
 ![Namecheap](https://img.shields.io/badge/Namecheap-E22424?style=for-the-badge&logo=namecheap&logoColor=white)
 
-## Live Now
+## Live Now !
 
-Experience the Student AI Toolkit in action:
+* Experience the Student AI Toolkit in action: https://www.studentsai.org/
 
-[studentsai.org](https://www.studentsai.org/)
+<a href="https://www.studentsai.org/" target="_blank">
+  <img width="1565" height="1308" alt="image" src="https://github.com/user-attachments/assets/3f731e7c-902c-4f26-b076-79776d48721f" />
+</a>
 
 ## About
 
