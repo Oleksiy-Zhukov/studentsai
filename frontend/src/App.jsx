@@ -55,16 +55,12 @@ function App() {
         requestBody.recaptcha_token = recaptchaToken
       }
       
-      const response = await fetch('https://students-ai-toolkit-production.up.railway.app/', {
+      const response = await fetch('https://api.studentsai.org/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: action,
-          text_content: textContent,
-          additional_instructions: additionalInstructions
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
@@ -333,4 +329,3 @@ function App() {
 }
 
 export default App
-

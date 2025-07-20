@@ -54,9 +54,18 @@ export const ActionSelector = ({
     onActionSelect(actionId)
   }
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
     if (selectedAction && textContent) {
-      onProcess(textContent, selectedAction, additionalInstructions, recaptcha.token)
+      // Execute reCAPTCHA v3 before processing
+      if (recaptcha.isEnabled) {
+        recaptcha.execute()
+        // Wait a moment for the token to be generated
+        setTimeout(() => {
+          onProcess(textContent, selectedAction, additionalInstructions, recaptcha.token)
+        }, 500)
+      } else {
+        onProcess(textContent, selectedAction, additionalInstructions, '')
+      }
     }
   }
 
@@ -209,23 +218,16 @@ export const ActionSelector = ({
               </div>
             </div>
 
-            {/* reCAPTCHA */}
-            {recaptcha.isEnabled && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="flex justify-center"
-              >
-                <RecaptchaWrapper
-                  onVerify={recaptcha.handleVerify}
-                  onError={recaptcha.handleError}
-                  onExpire={recaptcha.handleExpire}
-                  size="normal"
-                  theme="light"
-                />
-              </motion.div>
-            )}
+            {/* reCAPTCHA v3 is invisible - no UI needed */}
+            <RecaptchaWrapper
+              action="submit"
+              onVerify={(token) => {
+                // Token is automatically handled by the useRecaptcha hook
+              }}
+              onError={(error) => {
+                console.error('reCAPTCHA error:', error)
+              }}
+            />
 
             {/* Process Button */}
             <motion.div
@@ -238,7 +240,7 @@ export const ActionSelector = ({
                 icon={Sparkles}
                 size="lg"
                 onClick={handleProcess}
-                disabled={!selectedAction || !textContent || isLoading || (recaptcha.isEnabled && !recaptcha.isVerified)}
+                disabled={!selectedAction || !textContent || isLoading}
                 isLoading={isLoading}
                 className="px-8 py-3 text-lg font-medium"
               >
@@ -279,4 +281,3 @@ export const ActionSelector = ({
     </div>
   )
 }
-
