@@ -6,6 +6,7 @@ import { ResultDisplay } from './components/ResultDisplay'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
 import { RecaptchaWrapper, useRecaptcha } from './components/RecaptchaWrapper'
+import { RecaptchaProvider } from './components/RecaptchaProvider'
 import { AnimatedCard, AnimatedCardHeader, AnimatedCardContent } from './components/animated/AnimatedCard'
 import { Toaster } from '@/components/ui/sonner'
 import { useScrollAnimation, useReducedMotion } from './hooks/useAnimations'
@@ -97,7 +98,8 @@ function App() {
   } : staggerItem
 
   return (
-    <div className="min-h-screen gradient-bg">
+    <RecaptchaProvider>
+      <div className="min-h-screen gradient-bg">
       <Header />
       
       <motion.main 
@@ -325,6 +327,7 @@ function App() {
       <Footer />
       <Toaster />
     </div>
+    </RecaptchaProvider>
   )
 }
 

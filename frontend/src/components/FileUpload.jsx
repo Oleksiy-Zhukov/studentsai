@@ -9,6 +9,7 @@ import { LoadingSpinner, ProgressSpinner } from './animated/LoadingSpinner'
 import { useReducedMotion, useProgressAnimation } from '@/hooks/useAnimations'
 import { uploadZoneVariants, successVariants, errorVariants } from '@/animations/variants'
 import { useRecaptcha } from './RecaptchaWrapper'
+import { useRecaptchaContext } from './RecaptchaProvider'
 
 export const FileUpload = ({ onFileUpload }) => {
   const [dragActive, setDragActive] = useState(false)
@@ -23,7 +24,7 @@ export const FileUpload = ({ onFileUpload }) => {
   const animatedProgress = useProgressAnimation(uploadProgress, 1000)
   
   // reCAPTCHA v3 integration
-  const recaptcha = useRecaptcha('file_upload')
+  const recaptcha = useRecaptchaContext()
 
   const handleDrag = useCallback((e) => {
     e.preventDefault()
@@ -73,13 +74,15 @@ export const FileUpload = ({ onFileUpload }) => {
       formData.append("summarize_background", "true") // Enable background summarization
 
       // Execute reCAPTCHA v3 before upload
-      if (recaptcha.isEnabled) {
+      if (recaptcha.isEnabled && recaptcha.isReady) {
         try {
-          const recaptchaToken = await recaptcha.execute()
+          const recaptchaToken = await recaptcha.execute('file_upload')
           formData.append("recaptcha_token", recaptchaToken)
         } catch (recaptchaError) {
           throw new Error(`reCAPTCHA verification failed: ${recaptchaError.message}`)
         }
+      } else if (recaptcha.isEnabled && !recaptcha.isReady) {
+        throw new Error("reCAPTCHA is not ready yet. Please wait a moment and try again.")
       }
 
       // Simulate upload progress

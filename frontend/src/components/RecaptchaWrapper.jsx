@@ -68,31 +68,25 @@ export const useRecaptcha = (action = 'submit') => {
 
   const execute = () => {
     return new Promise((resolve, reject) => {
-      setToken('')
+      setToken("")
       setIsVerified(false)
-      setError('')
+      setError("")
 
       if (!RECAPTCHA_SITE_KEY) {
-        const errorMsg = 'Missing reCAPTCHA site key'
+        const errorMsg = "Missing reCAPTCHA site key"
         setError(errorMsg)
         reject(new Error(errorMsg))
         return
       }
 
-      if (!window.grecaptcha) {
-        const errorMsg = 'reCAPTCHA is not loaded'
-        setError(errorMsg)
-        reject(new Error(errorMsg))
-        return
-      }
-
+      // Ensure grecaptcha is ready before executing
       window.grecaptcha.ready(() => {
         window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action }).then((recaptchaToken) => {
           setToken(recaptchaToken)
           setIsVerified(true)
           resolve(recaptchaToken)
         }).catch((err) => {
-          const errorMsg = 'Failed to execute reCAPTCHA'
+          const errorMsg = "Failed to execute reCAPTCHA"
           setError(errorMsg)
           reject(new Error(errorMsg))
         })

@@ -44,12 +44,9 @@ app = FastAPI(
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://studentsai.org",
-        "https://www.studentsai.org",
-    ],  # Change to specific origins in production
+    allow_origins=["*"],  # Allow all origins for testing
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
