@@ -67,23 +67,18 @@ export const FileUpload = ({ onFileUpload }) => {
     setUploadProgress(0)
 
     try {
+      // Create FormData first
+      const formData = new FormData()
+      formData.append("file", selectedFile)
+      formData.append("summarize_background", "true") // Enable background summarization
+
       // Execute reCAPTCHA v3 before upload
       if (recaptcha.isEnabled) {
-        recaptcha.execute()
-        
-        // Wait for reCAPTCHA token
-        let attempts = 0
-        while (!recaptcha.token && !recaptcha.error && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          attempts++
-        }
-        
-        if (recaptcha.error) {
-          throw new Error(`reCAPTCHA verification failed: ${recaptcha.error}`)
-        }
-        
-        if (!recaptcha.token) {
-          throw new Error('reCAPTCHA verification timed out')
+        try {
+          const recaptchaToken = await recaptcha.execute()
+          formData.append("recaptcha_token", recaptchaToken)
+        } catch (recaptchaError) {
+          throw new Error(`reCAPTCHA verification failed: ${recaptchaError.message}`)
         }
       }
 
@@ -98,16 +93,7 @@ export const FileUpload = ({ onFileUpload }) => {
         })
       }, 200)
 
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('summarize_background', 'true') // Enable background summarization
-      
-      // Add reCAPTCHA token if available
-      if (recaptcha.token) {
-        formData.append('recaptcha_token', recaptcha.token)
-      }
-
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.studentsai.org/'
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://students-ai-toolkit-production.up.railway.app'
       const response = await fetch(`${apiBaseUrl}/parse-file`, {
         method: 'POST',
         body: formData

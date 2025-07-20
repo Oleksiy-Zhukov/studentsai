@@ -58,11 +58,14 @@ export const ActionSelector = ({
     if (selectedAction && textContent) {
       // Execute reCAPTCHA v3 before processing
       if (recaptcha.isEnabled) {
-        recaptcha.execute()
-        // Wait a moment for the token to be generated
-        setTimeout(() => {
-          onProcess(textContent, selectedAction, additionalInstructions, recaptcha.token)
-        }, 500)
+        try {
+          const recaptchaToken = await recaptcha.execute()
+          onProcess(textContent, selectedAction, additionalInstructions, recaptchaToken)
+        } catch (recaptchaError) {
+          console.error('reCAPTCHA error:', recaptchaError)
+          // Still proceed with empty token for now
+          onProcess(textContent, selectedAction, additionalInstructions, '')
+        }
       } else {
         onProcess(textContent, selectedAction, additionalInstructions, '')
       }

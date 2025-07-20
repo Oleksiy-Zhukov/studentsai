@@ -67,26 +67,35 @@ export const useRecaptcha = (action = 'submit') => {
   const [isVerified, setIsVerified] = useState(false)
 
   const execute = () => {
-    setToken('')
-    setIsVerified(false)
-    setError('')
+    return new Promise((resolve, reject) => {
+      setToken('')
+      setIsVerified(false)
+      setError('')
 
-    if (!RECAPTCHA_SITE_KEY) {
-      setError('Missing reCAPTCHA site key')
-      return
-    }
+      if (!RECAPTCHA_SITE_KEY) {
+        const errorMsg = 'Missing reCAPTCHA site key'
+        setError(errorMsg)
+        reject(new Error(errorMsg))
+        return
+      }
 
-    if (!window.grecaptcha) {
-      setError('reCAPTCHA is not loaded')
-      return
-    }
+      if (!window.grecaptcha) {
+        const errorMsg = 'reCAPTCHA is not loaded'
+        setError(errorMsg)
+        reject(new Error(errorMsg))
+        return
+      }
 
-    window.grecaptcha.ready(() => {
-      window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action }).then((recaptchaToken) => {
-        setToken(recaptchaToken)
-        setIsVerified(true)
-      }).catch(() => {
-        setError('Failed to execute reCAPTCHA')
+      window.grecaptcha.ready(() => {
+        window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action }).then((recaptchaToken) => {
+          setToken(recaptchaToken)
+          setIsVerified(true)
+          resolve(recaptchaToken)
+        }).catch((err) => {
+          const errorMsg = 'Failed to execute reCAPTCHA'
+          setError(errorMsg)
+          reject(new Error(errorMsg))
+        })
       })
     })
   }

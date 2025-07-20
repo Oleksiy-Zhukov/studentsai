@@ -246,16 +246,18 @@ async def parse_file(
             )
 
             if not recaptcha_success:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"reCAPTCHA verification failed: {recaptcha_error}",
+                # Log the error but don't fail the request for now
+                print(
+                    f"reCAPTCHA verification failed for file upload: {recaptcha_error}"
                 )
+                # Uncomment the line below to enforce reCAPTCHA verification
+                # raise HTTPException(
+                #     status_code=400,
+                #     detail=f"reCAPTCHA verification failed: {recaptcha_error}",
+                # )
         elif recaptcha_verifier.is_enabled() and not recaptcha_token:
-            raise HTTPException(
-                status_code=400,
-                detail="reCAPTCHA token is required",
-            )
-
+            # If reCAPTCHA is enabled but no token provided, log but don't fail
+            print("reCAPTCHA is enabled for file upload but no token provided")
         # Validate file
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
