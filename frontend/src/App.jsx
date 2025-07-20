@@ -55,7 +55,7 @@ function App() {
         requestBody.recaptcha_token = recaptchaToken
       }
       
-      const response = await fetch('http://localhost:8000/process', {
+      const response = await fetch('https://students-ai-toolkit-production.up.railway.app/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
