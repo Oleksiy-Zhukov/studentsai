@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { AnimatedButton, AnimatedIconButton } from './animated/AnimatedButton'
 import { AnimatedCard } from './animated/AnimatedCard'
-import { RecaptchaWrapper, useRecaptcha } from './RecaptchaWrapper'
+import { RecaptchaWrapper } from './RecaptchaWrapper'
+import { useRecaptchaContext } from './RecaptchaProvider'
 import { useStaggeredAnimation, useReducedMotion } from '@/hooks/useAnimations'
 import { staggerContainer, staggerItem, slideVariants } from '@/animations/variants'
 
@@ -48,7 +49,7 @@ export const ActionSelector = ({
   const [additionalInstructions, setAdditionalInstructions] = useState('')
   const visibleActions = useStaggeredAnimation(actions.length, 0.1)
   const prefersReducedMotion = useReducedMotion()
-  const recaptcha = useRecaptcha()
+  const recaptcha = useRecaptchaContext()
 
   const handleActionClick = (actionId) => {
     onActionSelect(actionId)
@@ -57,9 +58,9 @@ export const ActionSelector = ({
   const handleProcess = async () => {
     if (selectedAction && textContent) {
       // Execute reCAPTCHA v3 before processing
-      if (recaptcha.isEnabled) {
+      if (recaptcha.isEnabled && recaptcha.isReady) {
         try {
-          const recaptchaToken = await recaptcha.execute()
+          const recaptchaToken = await recaptcha.execute('submit')
           onProcess(textContent, selectedAction, additionalInstructions, recaptchaToken)
         } catch (recaptchaError) {
           console.error('reCAPTCHA error:', recaptchaError)
