@@ -150,9 +150,9 @@ export const ResultDisplay = ({ result, error, isLoading }) => {
           <div className="flex items-center space-x-3">
             <motion.div
               whileHover={prefersReducedMotion ? {} : { 
-                scale: 1.05, 
-                rotate: 2,
-                transition: { duration: 0.15 }
+                scale: 1.1, 
+                rotate: 5,
+                transition: { duration: 0.2 }
               }}
               className="p-2 bg-primary/10 rounded-lg"
             >
@@ -309,3 +309,4 @@ export const ResultDisplay = ({ result, error, isLoading }) => {
     </AnimatePresence>
   )
 }
+

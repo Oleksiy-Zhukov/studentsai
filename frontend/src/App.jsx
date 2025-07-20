@@ -5,6 +5,7 @@ import { ActionSelector } from './components/ActionSelector'
 import { ResultDisplay } from './components/ResultDisplay'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
+import { RecaptchaWrapper, useRecaptcha } from './components/RecaptchaWrapper'
 import { AnimatedCard, AnimatedCardHeader, AnimatedCardContent } from './components/animated/AnimatedCard'
 import { Toaster } from '@/components/ui/sonner'
 import { useScrollAnimation, useReducedMotion } from './hooks/useAnimations'
@@ -21,6 +22,9 @@ function App() {
   const { ref: mainRef, isInView } = useScrollAnimation()
   const prefersReducedMotion = useReducedMotion()
 
+    // reCAPTCHA hook
+  const recaptcha = useRecaptcha()
+
   const handleFileUpload = (content) => {
     setUploadedContent(content)
     setResult(null)
@@ -34,12 +38,23 @@ function App() {
     setError(null)
   }
 
-  const handleProcess = async (textContent, action, additionalInstructions = '') => {
+   const handleProcess = async (textContent, action, additionalInstructions = '', recaptchaToken = '') => {
     setIsLoading(true)
     setError(null)
     setResult(null)
 
     try {
+       const requestBody = {
+        action: action,
+        text_content: textContent,
+        additional_instructions: additionalInstructions
+      }
+
+      // Add reCAPTCHA token if provided
+      if (recaptchaToken) {
+        requestBody.recaptcha_token = recaptchaToken
+      }
+      
       const response = await fetch('http://localhost:8000/process', {
         method: 'POST',
         headers: {

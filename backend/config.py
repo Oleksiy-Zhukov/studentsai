@@ -26,11 +26,14 @@ class Config:
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
+    # reCAPTCHA Configuration
+    RECAPTCHA_SITE_KEY: str = os.getenv("RECAPTCHA_SITE_KEY", "")
+    RECAPTCHA_SECRET_KEY: str = os.getenv("RECAPTCHA_SECRET_KEY", "")
 
     # File Upload Configuration
+    UPLOAD_FOLDER: str = "uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: set = {".pdf", ".txt", ".docx"}
-    UPLOAD_FOLDER: str = "uploads"
 
     @classmethod
     def validate_config(cls) -> bool:

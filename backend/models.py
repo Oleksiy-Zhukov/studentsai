@@ -18,6 +18,7 @@ class ProcessRequest(BaseModel):
     action: ActionType = Field(..., description="The AI action to perform")
     text_content: Optional[str] = Field(None, description="Direct text input")
     additional_instructions: Optional[str] = Field(None, description="Additional user instructions")
+    recaptcha_token: Optional[str] = Field(None, description="Optional reCAPTCHA token for verification")
 
 class ProcessResponse(BaseModel):
     """Response model for AI processing results."""

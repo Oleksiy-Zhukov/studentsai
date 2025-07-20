@@ -8,6 +8,7 @@ import { AnimatedButton, AnimatedIconButton } from './animated/AnimatedButton'
 import { LoadingSpinner, ProgressSpinner } from './animated/LoadingSpinner'
 import { useReducedMotion, useProgressAnimation } from '@/hooks/useAnimations'
 import { uploadZoneVariants, successVariants, errorVariants } from '@/animations/variants'
+import { useRecaptcha } from './RecaptchaWrapper'
 
 export const FileUpload = ({ onFileUpload }) => {
   const [dragActive, setDragActive] = useState(false)
@@ -20,6 +21,9 @@ export const FileUpload = ({ onFileUpload }) => {
   const fileInputRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
   const animatedProgress = useProgressAnimation(uploadProgress, 1000)
+  
+  // reCAPTCHA v3 integration
+  const recaptcha = useRecaptcha('file_upload')
 
   const handleDrag = useCallback((e) => {
     e.preventDefault()
@@ -63,6 +67,26 @@ export const FileUpload = ({ onFileUpload }) => {
     setUploadProgress(0)
 
     try {
+      // Execute reCAPTCHA v3 before upload
+      if (recaptcha.isEnabled) {
+        recaptcha.execute()
+        
+        // Wait for reCAPTCHA token
+        let attempts = 0
+        while (!recaptcha.token && !recaptcha.error && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          attempts++
+        }
+        
+        if (recaptcha.error) {
+          throw new Error(`reCAPTCHA verification failed: ${recaptcha.error}`)
+        }
+        
+        if (!recaptcha.token) {
+          throw new Error('reCAPTCHA verification timed out')
+        }
+      }
+
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
@@ -76,8 +100,15 @@ export const FileUpload = ({ onFileUpload }) => {
 
       const formData = new FormData()
       formData.append('file', selectedFile)
+      formData.append('summarize_background', 'true') // Enable background summarization
+      
+      // Add reCAPTCHA token if available
+      if (recaptcha.token) {
+        formData.append('recaptcha_token', recaptcha.token)
+      }
 
-      const response = await fetch('http://localhost:8000/upload', {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiBaseUrl}/parse-file`, {
         method: 'POST',
         body: formData
       })
@@ -87,12 +118,31 @@ export const FileUpload = ({ onFileUpload }) => {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Upload failed')
+        throw new Error(errorData.detail || 'File parsing failed')
       }
 
       const data = await response.json()
-      setSuccess('File uploaded successfully!')
-      onFileUpload(data.text_content)
+      
+      // Check if background summary is available
+      if (data.summary_available && data.background_summary) {
+        setSuccess('File parsed successfully! AI summary generated for review.')
+        // Use the AI summary instead of raw text for better user experience
+        onFileUpload(data.background_summary, {
+          originalText: data.extracted_text,
+          filename: data.filename,
+          hasSummary: true,
+          summaryUsed: true
+        })
+      } else {
+        setSuccess('File parsed successfully!')
+        // Use extracted text directly
+        onFileUpload(data.extracted_text, {
+          originalText: data.extracted_text,
+          filename: data.filename,
+          hasSummary: false,
+          summaryUsed: false
+        })
+      }
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000)
@@ -335,4 +385,3 @@ export const FileUpload = ({ onFileUpload }) => {
     </div>
   )
 }
-

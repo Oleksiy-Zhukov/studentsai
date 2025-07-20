@@ -13,6 +13,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from recaptcha import recaptcha_verifier
 
 from config import config
 from models import (
@@ -100,40 +101,43 @@ async def health_check():
 @app.post("/upload", response_model=FileUploadResponse, tags=["File Handling"])
 async def upload_file(file: UploadFile = File(...)):
     """
-    Handles file uploads, validates them, and extracts text content.
+    Upload a file and extract its text content.
+    Supports PDF, TXT, and DOCX files.
     """
     try:
+        # Validate file
         if not file.filename:
-            raise HTTPException(status_code=400, detail="No file name provided.")
+            raise HTTPException(status_code=400, detail="No file provided")
 
         if not file_processor.is_allowed_file(file.filename):
             raise HTTPException(
                 status_code=400,
-                detail=f"File type not allowed. Supported types are: {', '.join(config.ALLOWED_EXTENSIONS)}",
+                detail=f"File type not allowed. Supported types: {', '.join(config.ALLOWED_EXTENSIONS)}",
             )
 
+        # Check file size
         file_content = await file.read()
         if len(file_content) > config.MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=413,
-                detail=f"File is too large. Maximum size is {config.MAX_FILE_SIZE / (1024 * 1024):.1f}MB.",
+                detail=f"File too large. Maximum size: {config.MAX_FILE_SIZE / (1024 * 1024):.1f}MB",
             )
 
+        # Save file
         success, file_path, error = file_processor.save_uploaded_file(
             file_content, file.filename
         )
-        if not success or not file_path:
+        if not success:
             raise HTTPException(status_code=500, detail=error)
 
-        # Extract text from the saved file
+        # Extract text
         success, text_content, error = file_processor.extract_text_from_file(file_path)
 
-        # Clean up the temporary file
+        # Clean up uploaded file
         try:
             os.remove(file_path)
-        except OSError as e:
-            # Log this error but don't fail the request
-            print(f"Warning: Could not remove temporary file {file_path}: {e}")
+        except:
+            pass  # Ignore cleanup errors
 
         if not success:
             raise HTTPException(status_code=422, detail=error)
@@ -145,37 +149,52 @@ async def upload_file(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        # Log the full exception for debugging
-        print(f"An unexpected error occurred during file upload: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"An unexpected error occurred during upload: {str(e)}",
-        )
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
 @app.post("/process", response_model=ProcessResponse, tags=["AI Processing"])
 @limiter.limit("2/hour")
-async def process_content(request: Request, data: ProcessRequest):
-    """
-    Processes raw text content with the AI backend.
-    This endpoint is rate-limited.
-    """
+async def process_content(
+    body: ProcessRequest,
+    request: Request,
+):
+    recaptcha_success = True  # ✅ default to True
+    recaptcha_error = None
+
     try:
-        if not data.text_content or not data.text_content.strip():
-            raise HTTPException(
-                status_code=400, detail="No text content provided for processing."
+        # Only validate if recaptcha is enabled and token is provided
+        if (
+            recaptcha_verifier.is_enabled()
+            and hasattr(body, "recaptcha_token")
+            and body.recaptcha_token
+        ):
+            client_ip = request.client.host if request.client else None
+            recaptcha_success, recaptcha_error = recaptcha_verifier.verify_token(
+                body.recaptcha_token, client_ip
             )
 
+            if not recaptcha_success:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"reCAPTCHA verification failed: {recaptcha_error}",
+                )
+
+        # Validate input
+        if not body.text_content or not body.text_content.strip():
+            raise HTTPException(status_code=400, detail="No text content provided")
+
+        # Check if AI backend is available
         if not ai_backend.is_available():
             raise HTTPException(
                 status_code=503,
-                detail=f"The AI backend ({config.AI_BACKEND}) is currently unavailable. Please try again later.",
+                detail=f"AI backend ({config.AI_BACKEND}) is not available. Please check configuration.",
             )
 
+        # Process with AI
         success, result, error = ai_backend.process_text(
-            action=data.action,
-            text=data.text_content,
-            additional_instructions=data.additional_instructions,
+            action=body.action,
+            text=body.text_content,
+            additional_instructions=body.additional_instructions,
         )
 
         if not success:
@@ -185,61 +204,166 @@ async def process_content(request: Request, data: ProcessRequest):
             success=True,
             result=result,
             error=None,
-            action=data.action,
+            action=body.action,
             backend_used=config.AI_BACKEND,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"An unexpected error occurred during content processing: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"An unexpected error occurred during processing: {str(e)}",
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+
+@app.post("/parse-file", response_model=dict, tags=["AI Processing"])
+@limiter.limit("2/hour")
+async def parse_file(
+    request: Request,
+    file: UploadFile = File(...),
+    summarize_background: bool = Form(False),
+    recaptcha_token: Optional[str] = Form(None),
+):
+    """
+    Parse a file and extract text content, with optional background summarization.
+    Returns extracted text and optionally a summary for user review.
+    Includes reCAPTCHA v3 verification for security.
+    """
+    try:
+        # reCAPTCHA verification
+        recaptcha_success = True
+        recaptcha_error = None
+
+        # Only validate if recaptcha is enabled and token is provided
+        if recaptcha_verifier.is_enabled() and recaptcha_token:
+            client_ip = request.client.host if request.client else None
+            recaptcha_success, recaptcha_error = recaptcha_verifier.verify_token(
+                recaptcha_token, client_ip, action="file_upload"
+            )
+
+            if not recaptcha_success:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"reCAPTCHA verification failed: {recaptcha_error}",
+                )
+        elif recaptcha_verifier.is_enabled() and not recaptcha_token:
+            raise HTTPException(
+                status_code=400,
+                detail="reCAPTCHA token is required",
+            )
+
+        # Validate file
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No file provided")
+
+        if not file_processor.is_allowed_file(file.filename):
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type not allowed. Supported types: {', '.join(config.ALLOWED_EXTENSIONS)}",
+            )
+
+        # Check file size
+        file_content = await file.read()
+        if len(file_content) > config.MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size: {config.MAX_FILE_SIZE / (1024 * 1024):.1f}MB",
+            )
+
+        # Save file
+        success, file_path, error = file_processor.save_uploaded_file(
+            file_content, file.filename
         )
+        if not success:
+            raise HTTPException(status_code=500, detail=error)
+
+        # Extract text
+        success, text_content, error = file_processor.extract_text_from_file(file_path)
+
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except:
+            pass  # Ignore cleanup errors
+
+        if not success:
+            raise HTTPException(status_code=422, detail=error)
+
+        response = {
+            "success": True,
+            "filename": file.filename,
+            "extracted_text": text_content,
+            "text_length": len(text_content),
+            "error": None,
+        }
+
+        # Optional background summarization
+        if summarize_background and ai_backend.is_available():
+            try:
+                summary_success, summary_result, summary_error = (
+                    ai_backend.process_text(
+                        action=ActionType.SUMMARIZE,
+                        text=text_content,
+                        additional_instructions="Provide a concise summary for user review before further processing.",
+                    )
+                )
+
+                if summary_success:
+                    response["background_summary"] = summary_result
+                    response["summary_available"] = True
+                else:
+                    response["background_summary"] = None
+                    response["summary_available"] = False
+                    response["summary_error"] = summary_error
+            except Exception as e:
+                response["background_summary"] = None
+                response["summary_available"] = False
+                response["summary_error"] = f"Background summarization failed: {str(e)}"
+        else:
+            response["background_summary"] = None
+            response["summary_available"] = False
+            if summarize_background:
+                response["summary_error"] = (
+                    "AI backend not available for background summarization"
+                )
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File parsing failed: {str(e)}")
 
 
 @app.post("/process-file", response_model=ProcessResponse, tags=["AI Processing"])
 @limiter.limit("2/hour")
 async def process_file(
-    request: Request,  # FIX: Added the Request object for the limiter
+    request: Request,
     file: UploadFile = File(...),
     action: ActionType = Form(...),
     additional_instructions: Optional[str] = Form(None),
 ):
     """
-    Uploads a file and immediately processes its content with the AI backend.
-    This endpoint is rate-limited.
+    Upload a file and process its content with AI in one step.
+    Combines file upload and AI processing for convenience.
     """
     try:
-        # Step 1: Upload and extract text from the file
+        # Upload and extract text
         upload_response = await upload_file(file)
-        if not upload_response.success or not upload_response.content:
-            # upload_file raises HTTPException, but we handle this for robustness
-            raise HTTPException(
-                status_code=422,
-                detail=upload_response.error or "Failed to extract content from file.",
-            )
+        if not upload_response.success:
+            raise HTTPException(status_code=422, detail=upload_response.error)
 
-        # Step 2: Create a request model for the processing step
-        process_data = ProcessRequest(
+        # Process with AI
+        process_request = ProcessRequest(
             action=action,
             text_content=upload_response.content,
             additional_instructions=additional_instructions,
         )
 
-        # Step 3: Call the text processing endpoint
-        # We pass the original request object to maintain the client's identity for rate limiting
-        return await process_content(request, process_data)
+        return await process_content(body=process_request, request=request)
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"An unexpected error occurred during file processing: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"An unexpected error occurred during file processing: {str(e)}",
-        )
+        raise HTTPException(status_code=500, detail=f"File processing failed: {str(e)}")
 
 
 @app.get("/actions", response_model=dict, tags=["Configuration"])
