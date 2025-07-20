@@ -107,7 +107,7 @@ export const FileUpload = ({ onFileUpload }) => {
         formData.append('recaptcha_token', recaptcha.token)
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://students-ai-toolkit-production.up.railway.app/'
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.studentsai.org/'
       const response = await fetch(`${apiBaseUrl}/parse-file`, {
         method: 'POST',
         body: formData

@@ -44,7 +44,10 @@ app = FastAPI(
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to specific origins in production
+    allow_origins=[
+        "https://studentsai.org",
+        "https://www.studentsai.org",
+    ],  # Change to specific origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -153,7 +156,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @app.post("/process", response_model=ProcessResponse, tags=["AI Processing"])
-@limiter.limit("2/hour")
+@limiter.limit("4/hour")
 async def process_content(
     body: ProcessRequest,
     request: Request,
@@ -215,7 +218,7 @@ async def process_content(
 
 
 @app.post("/parse-file", response_model=dict, tags=["AI Processing"])
-@limiter.limit("2/hour")
+@limiter.limit("4/hour")
 async def parse_file(
     request: Request,
     file: UploadFile = File(...),
@@ -334,7 +337,7 @@ async def parse_file(
 
 
 @app.post("/process-file", response_model=ProcessResponse, tags=["AI Processing"])
-@limiter.limit("2/hour")
+@limiter.limit("4/hour")
 async def process_file(
     request: Request,
     file: UploadFile = File(...),
