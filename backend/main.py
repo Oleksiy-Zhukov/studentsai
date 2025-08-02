@@ -393,6 +393,11 @@ async def get_available_actions():
                 "name": "Plan Study",
                 "description": "Create a structured study plan from the content.",
             },
+            {
+                "id": ActionType.FLASHCARDS.value,
+                "name": "Generate Flashcards",
+                "description": "Create flashcards for active recall learning.",
+            },
         ]
     }
 

@@ -56,7 +56,8 @@ function App() {
         requestBody.recaptcha_token = recaptchaToken
       }
       
-      const response = await fetch('https://api.studentsai.org/process', {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiBaseUrl}/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
