@@ -100,234 +100,120 @@ function App() {
 
   return (
     <RecaptchaProvider>
-      <div className="min-h-screen gradient-bg">
-      <Header />
-      
-      <motion.main 
-        ref={mainRef}
-        variants={pageVariants}
-        initial="initial"
-        animate={isInView ? "animate" : "initial"}
-        className="container mx-auto px-6 py-12 max-w-4xl"
-      >
-        <motion.div 
-          variants={containerVariants}
-          initial="initial"
-          animate="animate"
-          className="space-y-12"
-        >
-          {/* Hero Section */}
-          <motion.section 
-            variants={sectionVariants}
-            className="text-center space-y-4 py-8"
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-indigo-400/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-cyan-400/10 to-blue-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
+        </div>
+
+        {/* Main Content */}
+        <div className="relative z-10">
+          <Header />
+          
+          <main 
+            ref={mainRef}
+            className="container mx-auto px-4 py-8 max-w-6xl"
           >
-            <motion.h1 
-              className="text-4xl md:text-5xl font-bold gradient-text"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
+            <motion.div
+              variants={containerVariants}
+              initial="initial"
+              animate="animate"
+              className="space-y-12"
             >
-              Transform Your Learning
-            </motion.h1>
-            <motion.p 
-              className="text-lg text-muted-foreground max-w-2xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-            >
-              Upload your study materials and let AI help you summarize, create questions, 
-              and plan your learning journey with intelligent insights.
-            </motion.p>
-          </motion.section>
-
-          {/* File Upload Section */}
-          <motion.section 
-            variants={sectionVariants} 
-            className="py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto"
-          >
-            <AnimatedCard className="overflow-hidden border border-border shadow-sm rounded-2xl">
-              <AnimatedCardHeader className="px-6 pt-6">
-                <div className="flex items-center space-x-3">
-                  <motion.div
-                    animate={prefersReducedMotion ? {} : {
-                      rotate: [0, 10, -10, 0],
-                      transition: {
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }
-                    }}
-                    className="text-2xl"
-                  >
-                    📁
-                  </motion.div>
-                  <h2 className="text-2xl font-semibold text-foreground">
-                    Upload Your Content
-                  </h2>
-                </div>
-                <p className="text-muted-foreground mt-3 text-sm">
-                  Start by uploading a document or pasting your text content
-                </p>
-              </AnimatedCardHeader>
-              <AnimatedCardContent className="px-6 pb-6 pt-2">
-                <FileUpload onFileUpload={handleFileUpload} />
-              </AnimatedCardContent>
-            </AnimatedCard>
-          </motion.section>
-
-
-          {/* Action Selection Section */}
-          <AnimatePresence>
-            {uploadedContent && (
-              <motion.section 
-                variants={sectionVariants} 
-                initial="initial" 
-                animate="animate" 
-                exit="exit"
-                className="py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto"
+              {/* Hero Section */}
+              <motion.section
+                variants={sectionVariants}
+                className="text-center space-y-6"
               >
-                <AnimatedCard className="overflow-hidden border border-border shadow-sm rounded-2xl" delay={0.2}>
-                  <AnimatedCardHeader className="px-6 pt-6">
-                    <div className="flex items-center space-x-3">
-                      <motion.div
-                        animate={prefersReducedMotion ? {} : {
-                          scale: [1, 1.1, 1],
-                          transition: {
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }
-                        }}
-                        className="text-2xl"
-                      >
-                        🎯
-                      </motion.div>
-                      <h2 className="text-2xl font-semibold text-foreground">
-                        Choose Your Action
-                      </h2>
-                    </div>
-                    <p className="text-muted-foreground mt-3 text-sm">
-                      Select how you'd like AI to help with your content
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                  className="space-y-4"
+                >
+                  <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    Student AI Toolkit
+                  </h1>
+                  <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                    Transform your study materials with AI-powered tools. Summarize, generate questions, 
+                    create study plans, and build flashcards—all in one place.
+                  </p>
+                </motion.div>
+              </motion.section>
+
+              {/* File Upload Section */}
+              <motion.section
+                variants={sectionVariants}
+                className="space-y-6"
+              >
+                <AnimatedCard className="glass-card">
+                  <AnimatedCardHeader>
+                    <h2 className="text-2xl font-semibold text-foreground">Upload Your Content</h2>
+                    <p className="text-muted-foreground">
+                      Upload a document or paste text to get started
                     </p>
                   </AnimatedCardHeader>
-
-                  <AnimatedCardContent className="px-6 pb-6 pt-2">
-                    <ActionSelector 
-                      onActionSelect={handleActionSelect}
-                      selectedAction={selectedAction}
-                      textContent={uploadedContent}
-                      onProcess={handleProcess}
-                      isLoading={isLoading}
-                    />
+                  <AnimatedCardContent>
+                    <FileUpload onFileUpload={handleFileUpload} />
                   </AnimatedCardContent>
                 </AnimatedCard>
               </motion.section>
-            )}
-          </AnimatePresence>
 
-
-          {/* Results Section */}
-          <AnimatePresence>
-            {(result || error || isLoading) && (
-              <motion.section 
-                variants={sectionVariants} 
-                initial="initial" 
-                animate="animate" 
-                exit="exit"
-                className="py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto"
-              >
-                <AnimatedCard className="overflow-hidden border border-border shadow-sm rounded-2xl" delay={0.3}>
-                  <AnimatedCardHeader className="px-6 pt-6">
-                    <div className="flex items-center space-x-3">
-                      <motion.div
-                        animate={prefersReducedMotion ? {} : {
-                          rotate: [0, 360],
-                          transition: {
-                            duration: 3,
-                            repeat: Infinity,
-                            ease: "linear"
-                          }
-                        }}
-                        className="text-2xl"
-                      >
-                        ✨
-                      </motion.div>
-                      <h2 className="text-2xl font-semibold text-foreground">
-                        Results
-                      </h2>
-                    </div>
-                    <p className="text-muted-foreground mt-3 text-sm">
-                      {isLoading 
-                        ? 'AI is processing your content...' 
-                        : "Here's what AI generated for you"}
+              {/* Action Selector Section */}
+              {uploadedContent && (
+                <motion.section
+                  variants={sectionVariants}
+                  className="space-y-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  <div className="text-center space-y-4">
+                    <h2 className="text-2xl font-semibold text-foreground">Choose Your AI Action</h2>
+                    <p className="text-muted-foreground">
+                      Select how you'd like to process your content
                     </p>
-                  </AnimatedCardHeader>
+                  </div>
+                  <ActionSelector
+                    onActionSelect={handleActionSelect}
+                    selectedAction={selectedAction}
+                    textContent={uploadedContent}
+                    onProcess={handleProcess}
+                    isLoading={isLoading}
+                  />
+                </motion.section>
+              )}
 
-                  <AnimatedCardContent className="px-6 pb-6 pt-2">
-                    <ResultDisplay 
+              {/* Results Section */}
+              <AnimatePresence mode="wait">
+                {(result || error || isLoading) && (
+                  <motion.section
+                    variants={sectionVariants}
+                    className="space-y-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <ResultDisplay
                       result={result}
                       error={error}
                       isLoading={isLoading}
                     />
-                  </AnimatedCardContent>
-                </AnimatedCard>
-              </motion.section>
-            )}
-          </AnimatePresence>
+                  </motion.section>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </main>
 
+          <Footer />
+        </div>
 
-          {/* Getting Started Guide */}
-          {!uploadedContent && (
-            <motion.section 
-              variants={sectionVariants}
-              className="py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto"
-            >
-              <AnimatedCard className="overflow-hidden border border-border shadow-sm rounded-2xl bg-primary/5">
-                <AnimatedCardHeader className="px-6 pt-6">
-                  <motion.div
-                    animate={prefersReducedMotion ? {} : {
-                      y: [-5, 5, -5],
-                      transition: {
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }
-                    }}
-                    className="text-3xl mb-4 text-center"
-                  >
-                  🚀
-                  </motion.div>
-                  <h2 className="text-2xl font-semibold text-primary text-center">
-                    Ready to Get Started?
-                  </h2>
-                  <p className="text-muted-foreground mt-3 text-sm text-center">
-                    Upload a document or paste your text above to begin your AI-powered learning journey.
-                  </p>
-                </AnimatedCardHeader>
-
-                <AnimatedCardContent className="px-6 pb-6 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                    {["Upload content", "Choose action", "Get AI insights"].map((step, index) => (
-                      <div key={step} className="flex items-center space-x-3">
-                        <div className="w-7 h-7 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        <span>{step}</span>
-                      </div>
-                    ))}
-                  </div>
-                </AnimatedCardContent>
-              </AnimatedCard>
-            </motion.section>
-          )}
-
-
-        </motion.div>
-      </motion.main>
-
-      <Footer />
-      <Toaster />
-    </div>
+        <Toaster />
+        <RecaptchaWrapper />
+      </div>
     </RecaptchaProvider>
   )
 }
