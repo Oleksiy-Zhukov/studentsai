@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { cardVariants, animations, shadows } from '@/lib/design-system'
+import { cardVariants, animations, shadows } from '@/lib/design-system.js'
 
 const EnhancedCard = React.forwardRef(({
   className,

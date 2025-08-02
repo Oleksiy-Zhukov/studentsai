@@ -10,7 +10,7 @@ import { RecaptchaWrapper } from './RecaptchaWrapper'
 import { useRecaptchaContext } from './RecaptchaProvider'
 import { useStaggeredAnimation, useReducedMotion } from '@/hooks/useAnimations'
 import { staggerContainer, staggerItem, slideVariants } from '@/animations/variants'
-import { getActionColor, createStaggerAnimation } from '@/lib/design-system'
+import { getActionColor, createStaggerAnimation } from '@/lib/design-system.js'
 
 const actions = [
   {
