@@ -5,12 +5,9 @@ import { ActionSelector } from './components/ActionSelector'
 import { ResultDisplay } from './components/ResultDisplay'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
-import { RecaptchaWrapper, useRecaptcha } from './components/RecaptchaWrapper'
+import { RecaptchaWrapper } from './components/RecaptchaWrapper'
 import { RecaptchaProvider } from './components/RecaptchaProvider'
-import { AnimatedCard, AnimatedCardHeader, AnimatedCardContent } from './components/animated/AnimatedCard'
 import { Toaster } from '@/components/ui/sonner'
-import { useScrollAnimation, useReducedMotion } from './hooks/useAnimations'
-import { pageVariants, staggerContainer, staggerItem } from './animations/variants'
 import './App.css'
 
 function App() {
@@ -20,29 +17,38 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   
-  const { ref: mainRef, isInView } = useScrollAnimation()
-  const prefersReducedMotion = useReducedMotion()
-
-    // reCAPTCHA hook
-  const recaptcha = useRecaptcha()
-
+  // Progressive disclosure state
+  const [showHero, setShowHero] = useState(true)
+  const [showFileUpload, setShowFileUpload] = useState(true)
+  const [showActionSelector, setShowActionSelector] = useState(true)
+  const [showResults, setShowResults] = useState(false)
+  
   const handleFileUpload = (content) => {
     setUploadedContent(content)
     setResult(null)
     setError(null)
     setSelectedAction('')
+    setShowResults(false)
+    setShowActionSelector(true)
   }
 
   const handleActionSelect = (action) => {
     setSelectedAction(action)
     setResult(null)
     setError(null)
+    setShowResults(false)
   }
 
-   const handleProcess = async (textContent, action, additionalInstructions = '', recaptchaToken = '') => {
+  const handleProcess = async (textContent, action, additionalInstructions = '', recaptchaToken = '') => {
     setIsLoading(true)
     setError(null)
     setResult(null)
+    
+    // Progressive disclosure: collapse previous sections
+    setShowHero(false)
+    setShowFileUpload(false)
+    setShowActionSelector(false)
+    setShowResults(true)
 
     try {
        const requestBody = {
@@ -79,24 +85,17 @@ function App() {
     }
   }
 
-  const containerVariants = prefersReducedMotion ? {
-    initial: { opacity: 1 },
-    animate: { opacity: 1 }
-  } : {
-    ...staggerContainer,
-    animate: {
-      ...staggerContainer.animate,
-      transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1
-      }
-    }
+  const handleReset = () => {
+    setUploadedContent('')
+    setSelectedAction('')
+    setResult(null)
+    setError(null)
+    setIsLoading(false)
+    setShowHero(true)
+    setShowFileUpload(true)
+    setShowActionSelector(true)
+    setShowResults(false)
   }
-
-  const sectionVariants = prefersReducedMotion ? {
-    initial: { opacity: 1, y: 0 },
-    animate: { opacity: 1, y: 0 }
-  } : staggerItem
 
   return (
     <RecaptchaProvider>
@@ -112,70 +111,99 @@ function App() {
         <div className="relative z-10">
           <Header />
           
-          <main 
-            ref={mainRef}
-            className="container mx-auto px-4 py-8 max-w-6xl"
-          >
-            <motion.div
-              variants={containerVariants}
-              initial="initial"
-              animate="animate"
-              className="space-y-12"
-            >
-              {/* Hero Section */}
-              <motion.section
-                variants={sectionVariants}
-                className="text-center space-y-6"
-              >
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+          <main className="container mx-auto px-4 py-8 max-w-6xl">
+            <div className="space-y-12">
+              {/* Hero Section with Progressive Disclosure */}
+              <AnimatePresence>
+                {showHero && (
+                  <motion.section 
+                    className="text-center space-y-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20, height: 0 }}
+                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                <motion.div 
+                  className="space-y-6"
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-                  className="space-y-4"
+                  transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
-                  <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  <motion.h1 
+                    className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1.2, delay: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
                     Student AI Toolkit
-                  </h1>
-                  <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                    Transform your study materials with AI-powered tools. Summarize, generate questions, 
-                    create study plans, and build flashcards—all in one place.
-                  </p>
+                  </motion.h1>
+                  <motion.p 
+                    className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                    Transform your study materials with AI-powered tools. 
+                    <span className="text-primary font-medium"> Summarize</span>, 
+                    <span className="text-purple-500 font-medium"> generate questions</span>, 
+                    <span className="text-blue-500 font-medium"> create study plans</span>, and 
+                    <span className="text-cyan-500 font-medium"> build flashcards</span>—all in one place.
+                  </motion.p>
                 </motion.div>
               </motion.section>
+                )}
+              </AnimatePresence>
 
               {/* File Upload Section */}
-              <motion.section
-                variants={sectionVariants}
-                className="space-y-6"
-              >
-                <AnimatedCard className="glass-card">
-                  <AnimatedCardHeader>
+              <AnimatePresence>
+                {showFileUpload && (
+                  <motion.section 
+                    className="space-y-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20, height: 0 }}
+                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                <motion.div 
+                  className="glass-card p-6"
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                >
+                  <div className="space-y-4">
                     <h2 className="text-2xl font-semibold text-foreground">Upload Your Content</h2>
                     <p className="text-muted-foreground">
                       Upload a document or paste text to get started
                     </p>
-                  </AnimatedCardHeader>
-                  <AnimatedCardContent>
+                  </div>
+                  <div className="mt-6">
                     <FileUpload onFileUpload={handleFileUpload} />
-                  </AnimatedCardContent>
-                </AnimatedCard>
+                  </div>
+                </motion.div>
               </motion.section>
+                )}
+              </AnimatePresence>
 
               {/* Action Selector Section */}
-              {uploadedContent && (
-                <motion.section
-                  variants={sectionVariants}
-                  className="space-y-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-                >
-                  <div className="text-center space-y-4">
+              <AnimatePresence>
+                {showActionSelector && uploadedContent && (
+                  <motion.section 
+                    className="space-y-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20, height: 0 }}
+                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                  <motion.div 
+                    className="text-center space-y-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
                     <h2 className="text-2xl font-semibold text-foreground">Choose Your AI Action</h2>
                     <p className="text-muted-foreground">
                       Select how you'd like to process your content
                     </p>
-                  </div>
+                  </motion.div>
                   <ActionSelector
                     onActionSelect={handleActionSelect}
                     selectedAction={selectedAction}
@@ -184,19 +212,29 @@ function App() {
                     isLoading={isLoading}
                   />
                 </motion.section>
-              )}
+                )}
+              </AnimatePresence>
 
               {/* Results Section */}
-              <AnimatePresence mode="wait">
-                {(result || error || isLoading) && (
-                  <motion.section
-                    variants={sectionVariants}
+              <AnimatePresence>
+                {showResults && (result || error || isLoading) && (
+                  <motion.section 
                     className="space-y-6"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                    exit={{ opacity: 0, y: -20, height: 0 }}
+                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
                   >
+                    <div className="text-center mb-6">
+                      <motion.button
+                        onClick={handleReset}
+                        className="px-6 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors duration-200"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        ← Start Over
+                      </motion.button>
+                    </div>
                     <ResultDisplay
                       result={result}
                       error={error}
@@ -205,7 +243,7 @@ function App() {
                   </motion.section>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </div>
           </main>
 
           <Footer />
