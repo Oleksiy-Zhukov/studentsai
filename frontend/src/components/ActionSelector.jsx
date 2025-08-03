@@ -119,8 +119,17 @@ export const ActionSelector = ({
                 {isSelected && (
                   <div className="flex justify-center">
                     <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-yellow-500 dark:bg-yellow-500 rounded-full" />
-                      <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Selected</span>
+                      {isLoading ? (
+                        <>
+                          <div className="pixel-loader text-yellow-600 dark:text-yellow-400" style={{ width: '12px', height: '12px' }} />
+                          <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-yellow-500 dark:bg-yellow-500 rounded-full" />
+                          <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Selected</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -189,7 +198,14 @@ export const ActionSelector = ({
                   {textContent.length} characters
                 </span>
                 <span className="text-xs text-foreground font-medium">
-                  Ready to process
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="pixel-loader text-foreground" style={{ width: '12px', height: '12px' }} />
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    'Ready to process'
+                  )}
                 </span>
               </div>
             </div>
@@ -214,9 +230,14 @@ export const ActionSelector = ({
               className="japanese-button text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Processing...</span>
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="pixel-loader text-white mx-auto" />
+                  <div className="text-center space-y-2">
+                    <span className="text-sm font-medium">AI Processing...</span>
+                    <div className="w-48 h-2 bg-white/20 border border-white/30 overflow-hidden">
+                      <div className="retro-progress h-full bg-white/60" />
+                    </div>
+                  </div>
                 </div>
               ) : (
                 `${actions.find(a => a.id === selectedAction)?.title || 'Process'}`

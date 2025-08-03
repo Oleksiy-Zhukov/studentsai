@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { useRecaptchaContext } from './RecaptchaProvider'
+import { RetroTooltip } from '@/components/ui/retro-tooltip'
 
 export const FileUpload = ({ onFileUpload }) => {
   const [dragActive, setDragActive] = useState(false)
@@ -166,7 +167,7 @@ export const FileUpload = ({ onFileUpload }) => {
     setSuccess('')
   }
 
-  // Keyboard shortcuts
+  // Simple keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Command + Enter (Mac) or Ctrl + Enter (Windows/Linux) to submit text
@@ -196,7 +197,7 @@ export const FileUpload = ({ onFileUpload }) => {
           placeholder="Paste your study material here or start typing your content..."
           value={textContent}
           onChange={(e) => setTextContent(e.target.value)}
-          className="min-h-[200px] resize-none japanese-textarea text-base"
+          className="min-h-[200px] resize-none japanese-textarea text-base pixel-border"
           disabled={isUploading}
         />
           
@@ -206,28 +207,33 @@ export const FileUpload = ({ onFileUpload }) => {
               <p>⌘+Enter to submit • Esc to clear</p>
             </div>
             
-                          <div className="flex space-x-2">
+            <div className="flex space-x-2">
                 {textContent && (
-                  <button
-                    onClick={clearText}
-                    className="japanese-button text-xs bg-background text-foreground border-foreground hover:bg-foreground hover:text-background py-0.5 px-2"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    Clear
-                  </button>
+                  <RetroTooltip content="Clear text content" shortcut="escape">
+                    <button
+                      onClick={clearText}
+                      className="japanese-button text-xs bg-background text-foreground border-foreground hover:bg-foreground hover:text-background py-0.5 px-2"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Clear
+                    </button>
+                  </RetroTooltip>
                 )}
                 
-                <button
-                  onClick={handleTextSubmit}
-                  disabled={!textContent.trim() || isUploading}
-                  className="japanese-button text-xs disabled:opacity-50 disabled:cursor-not-allowed py-0.5 px-2"
-                >
-                  <Check className="w-3 h-3 mr-1" />
-                  Use This Text
-                </button>
+                <RetroTooltip content="Submit text content" shortcut="cmd+enter">
+                  <button
+                    onClick={handleTextSubmit}
+                    disabled={!textContent.trim() || isUploading}
+                    className="japanese-button text-xs disabled:opacity-50 disabled:cursor-not-allowed py-0.5 px-2"
+                  >
+                    <Check className="w-3 h-3 mr-1" />
+                    Use This Text
+                  </button>
+                </RetroTooltip>
               </div>
+            </div>
           </div>
-        </div>
+
 
       {/* File Upload Alternative */}
       <div className="relative">
@@ -238,7 +244,7 @@ export const FileUpload = ({ onFileUpload }) => {
         </div>
 
         <div
-          className={`upload-zone relative border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
+          className={`upload-zone relative border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 pixel-border ${
             dragActive ? 'border-yellow-500 bg-yellow-50 dark:border-yellow-500 dark:bg-yellow-900/20' : 'border-border'
           } ${isUploading ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:border-yellow-400 dark:hover:border-yellow-400'}`}
           onDragEnter={handleDrag}
@@ -258,11 +264,11 @@ export const FileUpload = ({ onFileUpload }) => {
 
           {isUploading ? (
             <div className="space-y-3">
-              <div className="w-6 h-6 border-2 border-yellow-600 dark:border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="pixel-loader text-yellow-600 dark:text-yellow-500 mx-auto" />
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Uploading file...</p>
                 <div className="max-w-xs mx-auto">
-                  <Progress value={uploadProgress} className="h-1" />
+                  <Progress value={uploadProgress} className="h-1 retro-progress" />
                   <p className="text-xs text-muted-foreground mt-1">
                     {Math.round(uploadProgress)}%
                   </p>

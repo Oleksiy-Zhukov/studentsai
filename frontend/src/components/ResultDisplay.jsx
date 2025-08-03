@@ -68,18 +68,25 @@ export const ResultDisplay = ({ result, error, isLoading }) => {
     return (
       <div className="space-y-6">
         <div className="japanese-card p-12">
-          <div className="flex flex-col items-center space-y-6">
-            <div className="w-8 h-8 border-2 border-foreground border-t-transparent animate-spin" />
-            <div className="text-center space-y-3">
-              <h3 className="text-lg japanese-text text-foreground">Processing your content</h3>
+          <div className="flex flex-col items-center space-y-8">
+            <div className="pixel-loader text-foreground" style={{ width: '32px', height: '32px' }} />
+            <div className="text-center space-y-4">
+              <h3 className="text-xl japanese-text text-foreground">AI Processing Your Content</h3>
               <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
                 Our AI is analyzing your content and generating the requested output. 
                 This may take a few moments.
               </p>
             </div>
-            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              <div className="w-2 h-2 bg-foreground rounded-full" />
-              <span>Using {result?.backend || 'AI'} backend</span>
+            
+            {/* Console-style Progress Bar */}
+            <div className="w-full max-w-md space-y-3">
+              <div className="console-progress w-full h-4">
+                {/* Progress bar fills automatically via CSS */}
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Processing...</span>
+                <span>Using {result?.backend || 'AI'} backend</span>
+              </div>
             </div>
           </div>
         </div>
