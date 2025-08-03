@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { FileUpload } from './components/FileUpload'
 import { ActionSelector } from './components/ActionSelector'
 import { ResultDisplay } from './components/ResultDisplay'
@@ -99,156 +98,130 @@ function App() {
 
   return (
     <RecaptchaProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-indigo-400/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-cyan-400/10 to-blue-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
-        </div>
+      <div className="min-h-screen bg-background">
+        <Header />
+        
+        <main className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="space-y-8">
+            {/* Hero Section */}
+            {showHero && (
+              <section className="min-h-screen flex items-center justify-center py-20">
+                <div className="max-w-4xl mx-auto text-center space-y-12">
+                  {/* Main Title */}
+                  <div className="space-y-6 animate-fade-in-up">
+                    <h1 className="text-6xl md:text-8xl font-bold text-foreground tracking-tight">
+                      StudentsAI
+                    </h1>
+                    <div className="w-24 h-1 bg-foreground mx-auto"></div>
+                    <p className="text-xl md:text-2xl text-muted-foreground font-light max-w-3xl mx-auto leading-relaxed">
+                      Transform your study materials with intelligent AI tools
+                    </p>
+                  </div>
 
-        {/* Main Content */}
-        <div className="relative z-10">
-          <Header />
-          
-          <main className="container mx-auto px-4 py-8 max-w-6xl">
-            <div className="space-y-12">
-              {/* Hero Section with Progressive Disclosure */}
-              <AnimatePresence>
-                {showHero && (
-                  <motion.section 
-                    className="text-center space-y-8"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20, height: 0 }}
-                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  >
-                <motion.div 
-                  className="space-y-6"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                >
-                  <motion.h1 
-                    className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1.2, delay: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  >
-                    Student AI Toolkit
-                  </motion.h1>
-                  <motion.p 
-                    className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  >
-                    Transform your study materials with AI-powered tools. 
-                    <span className="text-primary font-medium"> Summarize</span>, 
-                    <span className="text-purple-500 font-medium"> generate questions</span>, 
-                    <span className="text-blue-500 font-medium"> create study plans</span>, and 
-                    <span className="text-cyan-500 font-medium"> build flashcards</span>—all in one place.
-                  </motion.p>
-                </motion.div>
-              </motion.section>
-                )}
-              </AnimatePresence>
+                  {/* Feature Grid - 90s Style */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+                    <div className="japanese-card space-y-4 p-6 animate-slide-in-left animate-delay-1">
+                      <div className="text-3xl japanese-text text-foreground">01</div>
+                      <h3 className="text-lg japanese-text text-foreground">Summarize</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Extract key insights from your content
+                      </p>
+                    </div>
+                    <div className="japanese-card space-y-4 p-6 animate-fade-in-up animate-delay-2">
+                      <div className="text-3xl japanese-text text-foreground">02</div>
+                      <h3 className="text-lg japanese-text text-foreground">Generate</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Create study questions and flashcards
+                      </p>
+                    </div>
+                    <div className="japanese-card space-y-4 p-6 animate-slide-in-right animate-delay-3">
+                      <div className="text-3xl japanese-text text-foreground">03</div>
+                      <h3 className="text-lg japanese-text text-foreground">Plan</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Build structured study plans
+                      </p>
+                    </div>
+                  </div>
 
-              {/* File Upload Section */}
-              <AnimatePresence>
-                {showFileUpload && (
-                  <motion.section 
-                    className="space-y-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20, height: 0 }}
-                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  >
-                <motion.div 
-                  className="glass-card p-6"
-                  whileHover={{ y: -2 }}
-                  transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                >
-                  <div className="space-y-4">
-                    <h2 className="text-2xl font-semibold text-foreground">Upload Your Content</h2>
+                  {/* Call to Action */}
+                  <div className="mt-16 space-y-6 animate-fade-in-up animate-delay-3">
+                    <p className="text-lg text-muted-foreground">
+                      Ready to enhance your learning experience?
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowHero(false)
+                        setShowFileUpload(true)
+                      }}
+                      className="japanese-button text-lg"
+                    >
+                      Get Started
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* File Upload Section */}
+            {showFileUpload && (
+              <section className="space-y-4 animate-fade-in-up">
+                <div className="japanese-card p-8">
+                  <div className="text-center space-y-4">
+                    <h2 className="text-2xl japanese-text text-foreground">Upload Your Content</h2>
+                    <div className="w-16 h-1 bg-foreground mx-auto"></div>
                     <p className="text-muted-foreground">
                       Upload a document or paste text to get started
                     </p>
                   </div>
-                  <div className="mt-6">
+                  <div className="mt-8">
                     <FileUpload onFileUpload={handleFileUpload} />
                   </div>
-                </motion.div>
-              </motion.section>
-                )}
-              </AnimatePresence>
+                </div>
+              </section>
+            )}
 
-              {/* Action Selector Section */}
-              <AnimatePresence>
-                {showActionSelector && uploadedContent && (
-                  <motion.section 
-                    className="space-y-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20, height: 0 }}
-                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            {/* Action Selector Section */}
+            {showActionSelector && uploadedContent && (
+              <section className="space-y-6 animate-fade-in-up">
+                <div className="text-center space-y-4">
+                  <h2 className="text-2xl japanese-text text-foreground">Choose Your AI Action</h2>
+                  <div className="w-16 h-1 bg-foreground mx-auto"></div>
+                  <p className="text-muted-foreground">
+                    Select how you'd like to process your content
+                  </p>
+                </div>
+                <ActionSelector
+                  onActionSelect={handleActionSelect}
+                  selectedAction={selectedAction}
+                  textContent={uploadedContent}
+                  onProcess={handleProcess}
+                  isLoading={isLoading}
+                />
+              </section>
+            )}
+
+            {/* Results Section */}
+            {showResults && (result || error || isLoading) && (
+              <section className="space-y-6 animate-fade-in-up">
+                <div className="text-center mb-6">
+                  <button
+                    onClick={handleReset}
+                    className="japanese-button"
                   >
-                  <motion.div 
-                    className="text-center space-y-4"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  >
-                    <h2 className="text-2xl font-semibold text-foreground">Choose Your AI Action</h2>
-                    <p className="text-muted-foreground">
-                      Select how you'd like to process your content
-                    </p>
-                  </motion.div>
-                  <ActionSelector
-                    onActionSelect={handleActionSelect}
-                    selectedAction={selectedAction}
-                    textContent={uploadedContent}
-                    onProcess={handleProcess}
-                    isLoading={isLoading}
-                  />
-                </motion.section>
-                )}
-              </AnimatePresence>
+                    Start Over
+                  </button>
+                </div>
+                <ResultDisplay
+                  result={result}
+                  error={error}
+                  isLoading={isLoading}
+                />
+              </section>
+            )}
+          </div>
+        </main>
 
-              {/* Results Section */}
-              <AnimatePresence>
-                {showResults && (result || error || isLoading) && (
-                  <motion.section 
-                    className="space-y-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20, height: 0 }}
-                    transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  >
-                    <div className="text-center mb-6">
-                      <motion.button
-                        onClick={handleReset}
-                        className="px-6 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors duration-200"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        ← Start Over
-                      </motion.button>
-                    </div>
-                    <ResultDisplay
-                      result={result}
-                      error={error}
-                      isLoading={isLoading}
-                    />
-                  </motion.section>
-                )}
-              </AnimatePresence>
-            </div>
-          </main>
-
-          <Footer />
-        </div>
-
+        <Footer />
         <Toaster />
         <RecaptchaWrapper />
       </div>
