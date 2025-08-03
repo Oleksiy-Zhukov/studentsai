@@ -181,7 +181,7 @@ export const ActionSelector = ({
           </div>
 
           {/* Content Preview */}
-          <div className="japanese-card p-6 pixel-pattern">
+          <div className="japanese-card p-6">
             <div className="flex items-center space-x-3 mb-4 relative z-10">
               <FileText className="w-5 h-5 text-gray-900" />
               <h4 className="text-lg japanese-text text-foreground">Content Preview</h4>

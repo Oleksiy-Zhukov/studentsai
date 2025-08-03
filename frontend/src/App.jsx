@@ -98,10 +98,30 @@ function App() {
 
   return (
     <RecaptchaProvider>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background relative">
+        {/* Gridded background overlay */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: `
+            linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          backgroundPosition: '0 0'
+        }}></div>
+        
+        {/* Dark mode gridded background overlay */}
+        <div className="absolute inset-0 pointer-events-none dark:block hidden" style={{
+          backgroundImage: `
+            linear-gradient(rgba(235, 219, 178, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(235, 219, 178, 0.03) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          backgroundPosition: '0 0'
+        }}></div>
+        
         <Header />
         
-        <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
           <div className="space-y-8">
             {/* Hero Section */}
             {showHero && (
@@ -110,7 +130,7 @@ function App() {
                   {/* Main Title */}
                   <div className="space-y-8 animate-fade-in-up">
                     <div className="space-y-4">
-                      <h1 className="text-7xl md:text-9xl font-bold text-foreground tracking-tight">
+                      <h1 className="text-5xl md:text-7xl font-bold text-foreground tracking-tight">
                         StudentsAI
                       </h1>
                       <div className="w-32 h-1 bg-foreground mx-auto"></div>
