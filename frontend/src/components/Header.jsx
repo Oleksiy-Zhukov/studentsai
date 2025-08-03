@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Brain, Github, Moon, Sun } from 'lucide-react'
+import { Brain, Github, Moon, Sun, LogIn, User, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export const Header = () => {
+export const Header = ({ onNavigateToStudyFlow, onNavigateToAuth, isAuthenticated, onLogout }) => {
   const [isDark, setIsDark] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -42,6 +42,40 @@ export const Header = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
+            {/* Smart Study Flow Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNavigateToStudyFlow}
+              className="japanese-button"
+            >
+              <Brain className="w-4 h-4 mr-2" />
+              Smart Study Flow
+            </Button>
+
+            {/* Auth Buttons */}
+            {!isAuthenticated ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onNavigateToAuth}
+                className="p-2"
+              >
+                <LogIn className="w-4 h-4" />
+              </Button>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  className="p-2"
+                >
+                  <User className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
             {/* Theme Toggle */}
             <Button
               variant="ghost"

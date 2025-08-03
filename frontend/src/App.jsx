@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FileUpload } from './components/FileUpload'
 import { ActionSelector } from './components/ActionSelector'
 import { ResultDisplay } from './components/ResultDisplay'
 import { Header } from './components/Header'
+import { Auth } from './components/Auth'
 import { Footer } from './components/Footer'
 import { RecaptchaWrapper } from './components/RecaptchaWrapper'
 import { RecaptchaProvider } from './components/RecaptchaProvider'
@@ -15,12 +16,50 @@ function App() {
   const [result, setResult] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showStudyFlow, setShowStudyFlow] = useState(false)
+  
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
   
   // Progressive disclosure state
   const [showHero, setShowHero] = useState(true)
   const [showFileUpload, setShowFileUpload] = useState(true)
   const [showActionSelector, setShowActionSelector] = useState(true)
   const [showResults, setShowResults] = useState(false)
+
+  // Check auth status on mount
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    const userData = localStorage.getItem('user')
+    if (token && userData) {
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  // Auth handlers
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true)
+    setShowAuth(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    setIsAuthenticated(false)
+  }
+
+  const handleNavigateToAuth = () => {
+    setShowAuth(true)
+  }
+
+  const handleNavigateToStudyFlow = () => {
+    if (!isAuthenticated) {
+      setShowAuth(true)
+    } else {
+      setShowStudyFlow(true)
+    }
+  }
   
   const handleFileUpload = (content) => {
     setUploadedContent(content)
@@ -96,6 +135,23 @@ function App() {
     setShowResults(false)
   }
 
+  // Show auth page if requested
+  if (showAuth) {
+    return (
+      <RecaptchaProvider>
+        <Auth onAuthSuccess={handleAuthSuccess} />
+        <Toaster />
+        <RecaptchaWrapper />
+      </RecaptchaProvider>
+    )
+  }
+
+  // If user wants to see the study flow, redirect to it
+  if (showStudyFlow) {
+    window.location.href = '/study.html'
+    return null
+  }
+
   return (
     <RecaptchaProvider>
       <div className="min-h-screen bg-background relative">
@@ -119,7 +175,12 @@ function App() {
           backgroundPosition: '0 0'
         }}></div>
         
-        <Header />
+        <Header 
+          onNavigateToStudyFlow={handleNavigateToStudyFlow}
+          onNavigateToAuth={handleNavigateToAuth}
+          isAuthenticated={isAuthenticated}
+          onLogout={handleLogout}
+        />
         
         <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
           <div className="space-y-8">
@@ -137,6 +198,19 @@ function App() {
                     </div>
                     <p className="text-2xl md:text-3xl text-muted-foreground font-light max-w-4xl mx-auto leading-relaxed">
                       Your study materials, reimagined
+                    </p>
+                  </div>
+
+                  {/* Smart Study Flow Button */}
+                  <div className="mt-8 animate-fade-in-up animate-delay-1">
+                    <button
+                      onClick={() => setShowStudyFlow(true)}
+                      className="japanese-button text-lg mb-4"
+                    >
+                      🧠 Try Smart Study Flow (Beta)
+                    </button>
+                    <p className="text-sm text-muted-foreground">
+                      New: AI-powered knowledge graphs and adaptive learning
                     </p>
                   </div>
 

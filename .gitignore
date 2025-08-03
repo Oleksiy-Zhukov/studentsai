@@ -226,3 +226,27 @@ old_templates/
 *.swp
 .idea/
 .vscode/
+
+# Docker and development files
+docker-compose.yml
+docker-compose.override.yml
+setup_postgres.sh
+postgres_data/
+pgadmin_data/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files (already covered but being explicit)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
