@@ -193,13 +193,15 @@ export const FileUpload = ({ onFileUpload }) => {
     <div className="space-y-6">
       {/* Primary Text Input */}
       <div className="space-y-3">
-        <Textarea
-          placeholder="Paste your study material here or start typing your content..."
-          value={textContent}
-          onChange={(e) => setTextContent(e.target.value)}
-          className="min-h-[200px] resize-none japanese-textarea text-base pixel-border"
-          disabled={isUploading}
-        />
+        <div className="pixel-pattern">
+          <Textarea
+            placeholder="Paste your study material here or start typing your content..."
+            value={textContent}
+            onChange={(e) => setTextContent(e.target.value)}
+            className="min-h-[200px] resize-none japanese-textarea text-base pixel-border relative z-10"
+            disabled={isUploading}
+          />
+        </div>
           
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground space-y-1">

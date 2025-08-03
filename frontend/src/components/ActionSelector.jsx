@@ -181,12 +181,12 @@ export const ActionSelector = ({
           </div>
 
           {/* Content Preview */}
-          <div className="japanese-card p-6">
-            <div className="flex items-center space-x-3 mb-4">
+          <div className="japanese-card p-6 pixel-pattern">
+            <div className="flex items-center space-x-3 mb-4 relative z-10">
               <FileText className="w-5 h-5 text-gray-900" />
               <h4 className="text-lg japanese-text text-foreground">Content Preview</h4>
             </div>
-            <div className="bg-muted p-4 border-2 border-border">
+            <div className="bg-muted p-4 border-2 border-border relative z-10">
               <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
                 {textContent.length > 200 
                   ? `${textContent.substring(0, 200)}...` 
@@ -194,7 +194,7 @@ export const ActionSelector = ({
                 }
               </p>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" }}>
                   {textContent.length} characters
                 </span>
                 <span className="text-xs text-foreground font-medium">

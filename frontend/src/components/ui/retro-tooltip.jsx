@@ -92,7 +92,7 @@ export const RetroTooltip = ({
               {shortcut && (
                 <>
                   <span className="text-muted-foreground">•</span>
-                  <kbd className="retro-keyboard bg-muted border border-foreground px-1.5 py-0.5 text-xs font-mono rounded">
+                  <kbd className="retro-keyboard bg-muted border border-foreground px-1.5 py-0.5 text-xs rounded" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" }}>
                     {getKeyDisplay(shortcut)}
                   </kbd>
                 </>

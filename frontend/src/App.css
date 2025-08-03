@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -120,14 +121,22 @@
     font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     @apply bg-background text-foreground;
     background-image: 
-      radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.02) 1px, transparent 0);
-    background-size: 20px 20px;
+      radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.02) 1px, transparent 0),
+      /* Pixelated Japanese artifacts */
+      linear-gradient(45deg, transparent 40%, rgba(0, 0, 0, 0.01) 40%, rgba(0, 0, 0, 0.01) 60%, transparent 60%),
+      linear-gradient(-45deg, transparent 40%, rgba(0, 0, 0, 0.01) 40%, rgba(0, 0, 0, 0.01) 60%, transparent 60%);
+    background-size: 20px 20px, 40px 40px, 40px 40px;
+    background-position: 0 0, 10px 10px, 30px 30px;
   }
   
   .dark body {
     background-image: 
-      radial-gradient(circle at 1px 1px, rgba(235, 219, 178, 0.03) 1px, transparent 0);
-    background-size: 20px 20px;
+      radial-gradient(circle at 1px 1px, rgba(235, 219, 178, 0.03) 1px, transparent 0),
+      /* Pixelated Japanese artifacts for dark mode */
+      linear-gradient(45deg, transparent 40%, rgba(235, 219, 178, 0.02) 40%, rgba(235, 219, 178, 0.02) 60%, transparent 60%),
+      linear-gradient(-45deg, transparent 40%, rgba(235, 219, 178, 0.02) 40%, rgba(235, 219, 178, 0.02) 60%, transparent 60%);
+    background-size: 20px 20px, 40px 40px, 40px 40px;
+    background-position: 0 0, 10px 10px, 30px 30px;
   }
 }
 
@@ -185,7 +194,26 @@
   /* 90s Japanese inspired styles */
   .japanese-card {
     @apply bg-card border-2 border-foreground shadow-none;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .japanese-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      /* Pixelated corner decorations */
+      linear-gradient(45deg, transparent 0%, transparent calc(100% - 2px), currentColor 100%),
+      linear-gradient(-45deg, transparent 0%, transparent calc(100% - 2px), currentColor 100%);
+    background-size: 8px 8px;
+    opacity: 0.05;
+    pointer-events: none;
   }
   
   .japanese-card:hover {
@@ -198,7 +226,10 @@
   }
   
   .japanese-button {
-    @apply bg-foreground text-background border-2 border-foreground px-6 py-3 font-medium transition-all duration-300;
+    @apply bg-foreground text-background border-2 border-foreground px-6 py-3 transition-all duration-300;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
     position: relative;
     overflow: hidden;
   }
@@ -262,18 +293,81 @@
   }
   
   .japanese-text {
-    @apply font-bold tracking-tight;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    @apply tracking-tight;
   }
   
-  /* Enhanced textarea focus for Gruvbox theme */
+  /* Enhanced textarea with pixelated artifacts */
+  .japanese-textarea {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    position: relative;
+    background-image: 
+      /* Subtle pixelated grid */
+      linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+    background-size: 8px 8px;
+    border: 2px solid var(--border);
+    transition: all 0.3s ease;
+  }
+  
+  .dark .japanese-textarea {
+    background-image: 
+      linear-gradient(rgba(235, 219, 178, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(235, 219, 178, 0.03) 1px, transparent 1px);
+  }
+  
   .japanese-textarea:focus {
     border-color: #d79921 !important;
     box-shadow: 0 0 0 3px rgba(215, 153, 33, 0.1) !important;
+    background-image: 
+      /* Enhanced pixelated grid on focus */
+      linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      /* Corner pixel decorations */
+      linear-gradient(45deg, transparent 0%, transparent calc(100% - 1px), rgba(215, 153, 33, 0.2) 100%),
+      linear-gradient(-45deg, transparent 0%, transparent calc(100% - 1px), rgba(215, 153, 33, 0.2) 100%);
+    background-size: 8px 8px, 8px 8px, 16px 16px, 16px 16px;
   }
   
   .dark .japanese-textarea:focus {
     border-color: #d79921 !important;
     box-shadow: 0 0 0 3px rgba(215, 153, 33, 0.2) !important;
+    background-image: 
+      linear-gradient(rgba(235, 219, 178, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(235, 219, 178, 0.05) 1px, transparent 1px),
+      linear-gradient(45deg, transparent 0%, transparent calc(100% - 1px), rgba(215, 153, 33, 0.3) 100%),
+      linear-gradient(-45deg, transparent 0%, transparent calc(100% - 1px), rgba(215, 153, 33, 0.3) 100%);
+    background-size: 8px 8px, 8px 8px, 16px 16px, 16px 16px;
+  }
+  
+  /* Pixelated background patterns for cards */
+  .pixel-pattern {
+    position: relative;
+  }
+  
+  .pixel-pattern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      /* Pixelated dots pattern */
+      radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      /* Diagonal lines */
+      linear-gradient(45deg, transparent 0%, transparent calc(100% - 1px), rgba(0, 0, 0, 0.02) 100%);
+    background-size: 8px 8px, 16px 16px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .dark .pixel-pattern::before {
+    background-image: 
+      radial-gradient(circle at 2px 2px, rgba(235, 219, 178, 0.04) 1px, transparent 1px),
+      linear-gradient(45deg, transparent 0%, transparent calc(100% - 1px), rgba(235, 219, 178, 0.03) 100%);
   }
   
   /* Minimalistic animations */
@@ -345,14 +439,43 @@
   /* File upload zone */
   .upload-zone {
     @apply border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-all duration-200;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .upload-zone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      /* Pixelated upload pattern */
+      linear-gradient(90deg, transparent 0%, transparent calc(100% - 1px), rgba(0, 0, 0, 0.02) 100%),
+      linear-gradient(0deg, transparent 0%, transparent calc(100% - 1px), rgba(0, 0, 0, 0.02) 100%);
+    background-size: 12px 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
   
   .upload-zone:hover {
     @apply border-blue-400 bg-blue-50;
   }
   
+  .upload-zone:hover::before {
+    opacity: 1;
+  }
+  
   .upload-zone.drag-over {
     @apply border-blue-500 bg-blue-100;
+  }
+  
+  .dark .upload-zone::before {
+    background-image: 
+      linear-gradient(90deg, transparent 0%, transparent calc(100% - 1px), rgba(235, 219, 178, 0.03) 100%),
+      linear-gradient(0deg, transparent 0%, transparent calc(100% - 1px), rgba(235, 219, 178, 0.03) 100%);
   }
   
   /* Loading spinner */

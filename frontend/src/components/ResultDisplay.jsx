@@ -83,7 +83,7 @@ export const ResultDisplay = ({ result, error, isLoading }) => {
               <div className="console-progress w-full h-4">
                 {/* Progress bar fills automatically via CSS */}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" }}>
                 <span>Processing...</span>
                 <span>Using {result?.backend || 'AI'} backend</span>
               </div>
@@ -217,9 +217,9 @@ export const ResultDisplay = ({ result, error, isLoading }) => {
               ),
               code: ({node, inline, ...props}) => 
                 inline ? (
-                  <code className="bg-muted px-2 py-1 rounded-md text-sm font-mono text-yellow-600 dark:text-yellow-400" {...props} />
+                  <code className="bg-muted px-2 py-1 rounded-md text-sm text-yellow-600 dark:text-yellow-400" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" }} {...props} />
                 ) : (
-                  <code className="block bg-muted p-4 rounded-lg text-sm font-mono overflow-x-auto border border-border" {...props} />
+                  <code className="block bg-muted p-4 rounded-lg text-sm overflow-x-auto border border-border" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" }} {...props} />
                 ),
               blockquote: ({node, ...props}) => (
                 <blockquote className="border-l-4 border-yellow-500 pl-4 italic text-muted-foreground mb-4 bg-gray-50 py-2 rounded-r-lg" {...props} />
