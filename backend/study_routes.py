@@ -17,7 +17,7 @@ from models_study import (
     StudySession,
     LearningPath,
 )
-from auth_study import get_current_user
+from auth_study import get_current_user, create_access_token
 from schemas_study import (
     KnowledgeNodeCreate,
     KnowledgeNodeUpdate,
@@ -35,6 +35,14 @@ from schemas_study import (
 )
 
 router = APIRouter(prefix="/study", tags=["Study Flow"])
+
+
+# Token refresh endpoint
+@router.post("/refresh-token")
+async def refresh_token(current_user: User = Depends(get_current_user)):
+    """Refresh the JWT token."""
+    access_token = create_access_token(data={"sub": str(current_user.id)})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 # Knowledge Nodes

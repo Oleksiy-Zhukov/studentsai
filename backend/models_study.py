@@ -49,17 +49,40 @@ class User(Base):
 
 
 class KnowledgeNode(Base):
-    """Knowledge node model representing individual notes/concepts."""
+    """Enhanced knowledge node model representing individual notes/concepts."""
 
     __tablename__ = "knowledge_nodes"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    # Basic Properties
     title = Column(String(255), nullable=False)
     content = Column(Text)
-    difficulty_level = Column(String(20), default="beginner")
+    summary = Column(Text)  # AI-generated TL;DR
+
+    # Classification & Difficulty
+    difficulty_level = Column(
+        String(20), default="beginner"
+    )  # beginner, intermediate, advanced
+    difficulty_score = Column(
+        Float, default=1.0
+    )  # 1-5 scale based on quiz accuracy, time to understand
+    ai_rating = Column(Float, default=0.5)  # AI confidence in content quality (0-1)
+
+    # Organization & Discovery
     tags = Column(ARRAY(String), default=[])
-    node_metadata = Column(JSON, default={})
+    keywords = Column(ARRAY(String), default=[])  # For AI and search linkage
+    source_links = Column(ARRAY(String), default=[])  # External URLs or doc refs
+
+    # Metadata
+    created_by = Column(String(20), default="user")  # user/AI
+    last_reviewed = Column(DateTime)
+    review_count = Column(Integer, default=0)
+    mastery_level = Column(Float, default=0.0)  # 0-1 based on study sessions
+
+    # AI & Analytics
+    node_metadata = Column(JSON, default={})  # embeddings, semantic data, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -81,7 +104,7 @@ class KnowledgeNode(Base):
 
 
 class KnowledgeConnection(Base):
-    """Connection model representing relationships between knowledge nodes."""
+    """Enhanced connection model representing relationships between knowledge nodes."""
 
     __tablename__ = "knowledge_connections"
 
@@ -92,13 +115,36 @@ class KnowledgeConnection(Base):
     target_node_id = Column(
         UUID(as_uuid=True), ForeignKey("knowledge_nodes.id"), nullable=False
     )
-    relationship_type = Column(String(50), default="related")
-    strength = Column(Integer, default=1)  # 1-10 scale
+
+    # Connection Properties
+    relationship_type = Column(
+        String(50), default="related"
+    )  # manual, AI-suggested, prerequisite, related, derives_from, example_of, requires
+    weight = Column(
+        Float, default=1.0
+    )  # Strength of link (0-1, AI confidence, semantic similarity)
+    strength = Column(
+        Integer, default=1
+    )  # Legacy 1-10 scale for backward compatibility
+
+    # Creation & Management
+    user_created = Column(Boolean, default=False)  # Whether user explicitly added it
+    ai_confidence = Column(Float, default=0.0)  # AI confidence in this connection (0-1)
+    connection_tags = Column(ARRAY(String), default=[])  # e.g., logic, math, history
+
+    # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_used = Column(DateTime)  # When this connection was last traversed
+    usage_count = Column(Integer, default=0)  # How many times this connection was used
+
+    # AI & Analytics
+    connection_metadata = Column(
+        JSON, default={}
+    )  # semantic similarity, embeddings, etc.
 
 
 class StudySession(Base):
-    """Study session model for tracking learning progress."""
+    """Enhanced study session model for tracking learning progress."""
 
     __tablename__ = "study_sessions"
 
@@ -107,9 +153,15 @@ class StudySession(Base):
     node_id = Column(
         UUID(as_uuid=True), ForeignKey("knowledge_nodes.id"), nullable=False
     )
+
+    # Session Metrics
     session_duration = Column(Integer)  # in minutes
     mastery_level = Column(Integer, default=0)  # 0-100
-    session_data = Column(JSON, default={})
+    accuracy_score = Column(Float, default=0.0)  # Quiz/assessment accuracy
+    time_to_complete = Column(Integer)  # Time taken to complete exercises
+
+    # Session Data
+    session_data = Column(JSON, default={})  # Detailed session analytics
     completed_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -135,3 +187,36 @@ class LearningPath(Base):
 
     # Relationships
     user = relationship("User", back_populates="learning_paths")
+
+
+class AISuggestion(Base):
+    """Model for tracking AI-generated suggestions and their user feedback."""
+
+    __tablename__ = "ai_suggestions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    # Suggestion Details
+    suggestion_type = Column(
+        String(50), nullable=False
+    )  # connection, keyword, summary, quiz, study_plan
+    source_node_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_nodes.id"))
+    target_node_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_nodes.id"))
+
+    # Content
+    suggestion_content = Column(JSON, nullable=False)  # The actual suggestion data
+    ai_confidence = Column(Float, default=0.0)  # AI confidence in this suggestion
+
+    # User Feedback
+    user_feedback = Column(String(20))  # accepted, rejected, modified, pending
+    feedback_notes = Column(Text)  # User's reason for feedback
+
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    responded_at = Column(DateTime)
+
+    # Relationships
+    user = relationship("User")
+    source_node = relationship("KnowledgeNode", foreign_keys=[source_node_id])
+    target_node = relationship("KnowledgeNode", foreign_keys=[target_node_id])
