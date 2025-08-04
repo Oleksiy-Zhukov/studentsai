@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { Brain, Github, Moon, Sun, LogIn, User, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export const Header = ({ onNavigateToStudyFlow, onNavigateToAuth, isAuthenticated, onLogout }) => {
+export const Header = ({ 
+  onNavigateToStudyFlow, 
+  onNavigateToAuth, 
+  isAuthenticated, 
+  onLogout,
+  onToggleSidebar,
+  onToggleGraph,
+  graphVisible,
+  onNavigateToMain
+}) => {
   const [isDark, setIsDark] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -42,29 +51,36 @@ export const Header = ({ onNavigateToStudyFlow, onNavigateToAuth, isAuthenticate
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
-            {/* Smart Study Flow Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onNavigateToStudyFlow}
-              className="japanese-button"
-            >
-              <Brain className="w-4 h-4 mr-2" />
-              Smart Study Flow
-            </Button>
-
-            {/* Auth Buttons */}
-            {!isAuthenticated ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onNavigateToAuth}
-                className="p-2"
-              >
-                <LogIn className="w-4 h-4" />
-              </Button>
-            ) : (
-              <div className="flex items-center space-x-2">
+            {/* Study Flow Mode */}
+            {onToggleSidebar && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleSidebar}
+                  className="p-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleGraph}
+                  className="p-2"
+                >
+                  <Brain className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onNavigateToMain}
+                  className="japanese-button"
+                >
+                  Back to Main
+                </Button>
+                
                 <Button
                   variant="ghost"
                   size="sm"
@@ -73,7 +89,45 @@ export const Header = ({ onNavigateToStudyFlow, onNavigateToAuth, isAuthenticate
                 >
                   <User className="w-4 h-4" />
                 </Button>
-              </div>
+              </>
+            )}
+            
+            {/* Main App Mode */}
+            {!onToggleSidebar && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onNavigateToStudyFlow}
+                  className="japanese-button"
+                >
+                  <Brain className="w-4 h-4 mr-2" />
+                  Smart Study Flow
+                </Button>
+
+                {/* Auth Buttons */}
+                {!isAuthenticated ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onNavigateToAuth}
+                    className="p-2"
+                  >
+                    <LogIn className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onLogout}
+                      className="p-2"
+                    >
+                      <User className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Theme Toggle */}

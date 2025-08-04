@@ -5,7 +5,7 @@ import { KnowledgeGraph } from './KnowledgeGraph';
 import { ProgressPanel } from './ProgressPanel';
 import { Header } from './Header';
 
-export const Dashboard = () => {
+export const Dashboard = ({ onLogout, onNavigateToMain }) => {
   const [selectedNote, setSelectedNote] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [graphVisible, setGraphVisible] = useState(true);
@@ -132,6 +132,8 @@ export const Dashboard = () => {
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         onToggleGraph={() => setGraphVisible(!graphVisible)}
         graphVisible={graphVisible}
+        onLogout={onLogout}
+        onNavigateToMain={onNavigateToMain}
       />
       
       <div className="flex-1 flex overflow-hidden">
