@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 
 export const Header = ({ 
   onNavigateToStudyFlow, 
+  onNavigateToProfile,
   onNavigateToAuth, 
   isAuthenticated, 
   onLogout,
@@ -84,7 +85,7 @@ export const Header = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onLogout}
+                  onClick={onNavigateToProfile}
                   className="p-2"
                 >
                   <User className="w-4 h-4" />
@@ -117,14 +118,23 @@ export const Header = ({
                   </Button>
                 ) : (
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={onLogout}
-                      className="p-2"
-                    >
-                      <User className="w-4 h-4" />
-                    </Button>
+                                    <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onNavigateToProfile}
+                  className="p-2"
+                >
+                  <User className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  className="p-2"
+                >
+                  Logout
+                </Button>
                   </div>
                 )}
               </>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Dashboard } from './Dashboard'
+import { UserProfile } from './UserProfile'
 import { Auth } from './Auth'
 
-export const StudyFlow = () => {
+export const UserProfileWrapper = () => {
   const navigate = useNavigate()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
@@ -36,8 +36,8 @@ export const StudyFlow = () => {
     navigate('/')
   }
 
-  const handleNavigateToProfile = () => {
-    navigate('/profile')
+  const handleNavigateToStudy = () => {
+    navigate('/study')
   }
 
   // Show auth page if not authenticated
@@ -45,13 +45,13 @@ export const StudyFlow = () => {
     return <Auth onAuthSuccess={handleAuthSuccess} />
   }
 
-  // Show study flow if authenticated
+  // Show profile if authenticated
   if (isAuthenticated) {
     return (
-      <Dashboard 
+      <UserProfile 
         onLogout={handleLogout}
         onNavigateToMain={handleNavigateToMain}
-        onNavigateToProfile={handleNavigateToProfile}
+        onNavigateToStudy={handleNavigateToStudy}
       />
     )
   }

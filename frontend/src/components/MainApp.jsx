@@ -57,6 +57,14 @@ export const MainApp = () => {
       navigate('/study')
     }
   }
+
+  const handleNavigateToProfile = () => {
+    if (!isAuthenticated) {
+      setShowAuth(true)
+    } else {
+      navigate('/profile')
+    }
+  }
   
   const handleFileUpload = (content) => {
     setUploadedContent(content)
@@ -161,6 +169,7 @@ export const MainApp = () => {
       
       <Header 
         onNavigateToStudyFlow={handleNavigateToStudyFlow}
+        onNavigateToProfile={handleNavigateToProfile}
         onNavigateToAuth={handleNavigateToAuth}
         isAuthenticated={isAuthenticated}
         onLogout={handleLogout}
