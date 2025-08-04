@@ -44,6 +44,9 @@ Transform the basic interface into a polished, Obsidian-inspired study platform 
 - [x] **2.13** Add connection type filtering (prerequisite, related, derives_from, enhances)
 - [x] **2.14** Implement mastery level visualization (inner circle progress)
 - [x] **2.15** Add AI-powered connection service backend
+- [x] **2.16** Fix database schema issues and authentication errors
+- [x] **2.17** Implement token refresh system with 24-hour expiration
+- [x] **2.18** Create sample data for testing knowledge graph functionality
 
 ### **Step 3: Note Editor Improvements (Test after each substep)**
 - [ ] **3.1** Test current markdown editor
