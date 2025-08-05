@@ -14,10 +14,11 @@ function App() {
       <Router>
         <div className="min-h-screen bg-background">
           <Routes>
-            <Route path="/" element={<MainApp />} />
+            <Route path="/" element={<Navigate to="/study" replace />} />
             <Route path="/study" element={<StudyFlow />} />
+            <Route path="/main" element={<MainApp />} />
             <Route path="/profile" element={<UserProfileWrapper />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/study" replace />} />
           </Routes>
         </div>
         <Toaster />

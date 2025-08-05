@@ -26,6 +26,15 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
     study_plan: true,
     analysis: false
   });
+  
+  // Individual loading states for each AI feature
+  const [loadingStates, setLoadingStates] = useState({
+    summary: false,
+    quiz: false,
+    studyPlan: false,
+    connections: false,
+    analysis: false
+  });
 
   // Update local state when note prop changes
   useEffect(() => {
@@ -129,6 +138,74 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
       console.error('Failed to create AI connections:', error);
     } finally {
       setIsLoadingAI(false);
+    }
+  };
+
+  // Individual content generation functions
+  const generateSummary = async () => {
+    if (!note?.id) return;
+    
+    setLoadingStates(prev => ({ ...prev, summary: true }));
+    try {
+      const result = await api.generateSummary(note.id);
+      console.log('✅ Summary generated:', result.summary);
+      setAiSuggestions(prev => ({
+        ...prev,
+        summary: result.summary
+      }));
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, summary: false }));
+    }
+  };
+
+  const generateQuiz = async () => {
+    if (!note?.id) return;
+    
+    setLoadingStates(prev => ({ ...prev, quiz: true }));
+    try {
+      const result = await api.generateQuiz(note.id);
+      setAiSuggestions(prev => ({
+        ...prev,
+        quiz_questions: result.quiz_questions
+      }));
+    } catch (error) {
+      console.error('Failed to generate quiz:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, quiz: false }));
+    }
+  };
+
+  const generateStudyPlan = async () => {
+    if (!note?.id) return;
+    
+    setLoadingStates(prev => ({ ...prev, studyPlan: true }));
+    try {
+      const result = await api.generateStudyPlan(note.id);
+      setAiSuggestions(prev => ({
+        ...prev,
+        study_plan: result.study_plan
+      }));
+    } catch (error) {
+      console.error('Failed to generate study plan:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, studyPlan: false }));
+    }
+  };
+
+  const regenerateAnalysis = async () => {
+    if (!note?.id) return;
+    
+    setLoadingStates(prev => ({ ...prev, analysis: true }));
+    try {
+      const result = await api.regenerateAnalysis(note.id);
+      setAiSuggestions(result);
+      setShowAIPanel(true);
+    } catch (error) {
+      console.error('Failed to regenerate analysis:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, analysis: false }));
     }
   };
 
@@ -452,9 +529,27 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
               </div>
               {expandedSections.summary && (
                 <div className="px-4 pb-4">
-                  <div className="text-sm text-muted-foreground whitespace-pre-line">
-                    {aiSuggestions.summary}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">Content Summary</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={generateSummary}
+                      disabled={loadingStates.summary}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {loadingStates.summary ? 'Generating...' : 'Generate New'}
+                    </Button>
                   </div>
+                  {aiSuggestions?.summary ? (
+                    <div className="text-sm text-muted-foreground whitespace-pre-line bg-background/50 p-3 rounded border">
+                      {aiSuggestions.summary}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded">
+                      No summary generated yet. Click "Generate New" to create one.
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
@@ -475,6 +570,18 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
               </div>
               {expandedSections.connections && (
                 <div className="px-4 pb-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Suggested Connections</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={createAIConnections}
+                      disabled={isLoadingAI || !aiSuggestions.connection_suggestions?.length}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {isLoadingAI ? 'Creating...' : 'Create All'}
+                    </Button>
+                  </div>
                   {aiSuggestions.connection_suggestions?.length > 0 ? (
                     aiSuggestions.connection_suggestions.map((suggestion, index) => (
                       <div key={index} className="p-3 bg-background rounded-lg border border-border">
@@ -520,6 +627,18 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
               </div>
               {expandedSections.quiz && (
                 <div className="px-4 pb-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Practice Questions</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={generateQuiz}
+                      disabled={loadingStates.quiz}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {loadingStates.quiz ? 'Generating...' : 'Generate New'}
+                    </Button>
+                  </div>
                   {aiSuggestions.quiz_questions?.length > 0 ? (
                     aiSuggestions.quiz_questions.map((question, index) => (
                       <div key={index} className="p-3 bg-background rounded-lg border border-border">
@@ -565,11 +684,29 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
                   {expandedSections.study_plan ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
               </div>
-              {expandedSections.study_plan && aiSuggestions.study_plan && (
+              {expandedSections.study_plan && (
                 <div className="px-4 pb-4">
-                  <div className="text-sm text-muted-foreground whitespace-pre-line">
-                    {aiSuggestions.study_plan}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">Personalized Study Plan</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={generateStudyPlan}
+                      disabled={loadingStates.studyPlan}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {loadingStates.studyPlan ? 'Generating...' : 'Generate New'}
+                    </Button>
                   </div>
+                  {aiSuggestions.study_plan ? (
+                    <div className="text-sm text-muted-foreground whitespace-pre-line bg-background/50 p-3 rounded border">
+                      {aiSuggestions.study_plan}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded">
+                      No study plan generated yet. Click "Generate New" to create one.
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
@@ -588,9 +725,22 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
                   {expandedSections.analysis ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
               </div>
-              {expandedSections.analysis && aiSuggestions.ai_analysis && (
+              {expandedSections.analysis && (
                 <div className="px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">Content Analysis</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={regenerateAnalysis}
+                      disabled={loadingStates.analysis}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {loadingStates.analysis ? 'Analyzing...' : 'Regenerate All'}
+                    </Button>
+                  </div>
+                  {aiSuggestions.ai_analysis ? (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium">Keywords:</span>
                       <div className="flex flex-wrap gap-1 mt-1">
@@ -616,6 +766,11 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
                       </div>
                     </div>
                   </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded">
+                      No analysis available. Click "Regenerate All" to analyze this note.
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

@@ -1,6 +1,6 @@
 """
-AI-powered note processing service for intelligent knowledge management.
-Handles keyword extraction, content analysis, and connection suggestions.
+Production-ready AI-powered note processing service.
+Uses AIServiceManager for robust, scalable AI operations.
 """
 
 import re
@@ -9,44 +9,21 @@ from typing import List, Dict, Optional, Tuple
 from sqlalchemy.orm import Session
 from models_study import KnowledgeNode, KnowledgeConnection
 from ai_connection_service import AIConnectionService
+from ai_service_manager import ai_service_manager
 import numpy as np
 from datetime import datetime
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import yake
-from openai import OpenAI
 import os
 
 
 class HybridAINoteService:
-    """Hybrid AI service using local models for efficiency and OpenAI for complex tasks."""
+    """Production-ready hybrid AI service using AIServiceManager."""
 
     def __init__(self):
         self.connection_service = AIConnectionService()
-
-        # Initialize local models (simplified version)
-        self.sentence_model = None  # Will be added later
-        self.nlp = None  # Will be added later
-        print("⚠️ Using simplified AI service - heavy models will be added later")
-
-        # Initialize OpenAI client (only if API key is available)
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        if openai_api_key:
-            self.openai_client = OpenAI(api_key=openai_api_key)
-            print("✅ OpenAI client initialized")
-        else:
-            self.openai_client = None
-            print("⚠️ OpenAI API key not found - will use local models only")
-
-        # Initialize YAKE keyword extractor
-        try:
-            self.keyword_extractor = yake.KeywordExtractor(
-                lan="en", n=1, dedupLim=0.9, top=10
-            )
-            print("✅ YAKE keyword extractor initialized")
-        except Exception as e:
-            print(f"⚠️ Could not initialize YAKE: {e}")
-            self.keyword_extractor = None
+        self.ai_manager = ai_service_manager
+        # Get OpenAI client from AI service manager
+        self.openai_client = self.ai_manager.openai_client
+        print("✅ Production AI service initialized")
 
         # Common academic keywords and concepts
         self.academic_keywords = {
@@ -191,38 +168,30 @@ class HybridAINoteService:
     def suggest_connections(
         self, note: KnowledgeNode, all_notes: List[KnowledgeNode], db: Session
     ) -> List[Dict]:
-        """Suggest connections using TF-IDF similarity (simplified version)."""
+        """Suggest connections using production AI service manager."""
         suggestions = []
 
         if not all_notes:
             return suggestions
 
-        # Use TF-IDF for similarity (simplified approach)
         try:
-            # Prepare texts for TF-IDF
-            texts = [f"{note.title} {note.content or ''}"]
-            for other_note in all_notes:
-                if other_note.id != note.id:
-                    texts.append(f"{other_note.title} {other_note.content or ''}")
+            note_text = f"{note.title} {note.content or ''}"
 
-            # Create TF-IDF vectors
-            vectorizer = TfidfVectorizer(max_features=100, stop_words="english")
-            tfidf_matrix = vectorizer.fit_transform(texts)
-
-            # Calculate similarities
-            similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])
-
-            # Process similarities
-            for i, target_note in enumerate(all_notes):
+            for target_note in all_notes:
                 if target_note.id == note.id:
                     continue
 
-                similarity_score = (
-                    similarities[0][i] if i < len(similarities[0]) else 0.0
+                target_text = f"{target_note.title} {target_note.content or ''}"
+
+                # Use AI service manager for similarity
+                similarity_score = self.ai_manager.get_semantic_similarity(
+                    note_text, target_text
                 )
 
-                # Use local similarity threshold
-                if similarity_score > 0.1:  # Lower threshold for TF-IDF
+                # Use adaptive threshold based on similarity type
+                threshold = 0.3 if similarity_score > 0.5 else 0.1
+
+                if similarity_score > threshold:
                     connection_type = self._determine_connection_type_local(
                         note, target_note, similarity_score
                     )
@@ -248,42 +217,23 @@ class HybridAINoteService:
 
         # Sort by similarity and return top suggestions
         suggestions.sort(key=lambda x: x["weight"], reverse=True)
-        return suggestions[:10]
+        return suggestions[:5]
 
     def generate_quiz_questions(self, note: KnowledgeNode) -> List[Dict]:
-        """Generate quiz questions using local models first, OpenAI if available."""
-        questions = []
+        """Generate quiz questions using AI service manager."""
         content = note.content or ""
         title = note.title or ""
 
-        # Try local question generation first
-        local_questions = self._generate_questions_local(content, title)
-        questions.extend(local_questions)
-
-        # If we have OpenAI and want more sophisticated questions, use it
-        if self.openai_client and len(questions) < 3:
-            openai_questions = self._generate_questions_openai(content, title)
-            questions.extend(openai_questions)
-
-        return questions[:5]  # Return top 5 questions
+        return self.ai_manager.generate_quiz_questions(content, title)
 
     def generate_summary(
         self, note: KnowledgeNode, connected_notes: List[KnowledgeNode] = None
     ) -> str:
-        """Generate summary using local models first, OpenAI for enhanced summaries."""
+        """Generate summary using AI service manager."""
         content = note.content or ""
         title = note.title or ""
 
-        # Generate local summary first
-        local_summary = self._generate_summary_local(note, connected_notes)
-
-        # If user wants enhanced summary and OpenAI is available, use it
-        if self.openai_client and len(content) > 200:  # Only for longer content
-            enhanced_summary = self._generate_summary_openai(content, title)
-            if enhanced_summary:
-                return enhanced_summary
-
-        return local_summary
+        return self.ai_manager.generate_summary(content, title)
 
     def generate_study_recommendations(self, user_id: str, db: Session) -> List[Dict]:
         """Generate personalized study recommendations."""
@@ -363,30 +313,13 @@ class HybridAINoteService:
 
     # Local model implementations
     def _extract_keywords_local(self, text: str) -> List[str]:
-        """Extract keywords using YAKE (local)."""
-        if not self.keyword_extractor:
-            return self._extract_keywords_fallback(text)
-
-        try:
-            keywords = self.keyword_extractor.extract_keywords(text)
-            # YAKE returns (keyword, score) tuples, lower score is better
-            keywords = [kw for kw, score in sorted(keywords, key=lambda x: x[1])[:10]]
-            return keywords
-        except Exception as e:
-            print(f"YAKE keyword extraction failed: {e}")
-            return self._extract_keywords_fallback(text)
+        """Extract keywords using AI service manager."""
+        return self.ai_manager.extract_keywords(text)
 
     def _extract_keywords_fallback(self, text: str) -> List[str]:
         """Fallback keyword extraction using basic NLP."""
-        # Basic keyword extraction using TF-IDF
-        try:
-            vectorizer = TfidfVectorizer(max_features=10, stop_words="english")
-            tfidf_matrix = vectorizer.fit_transform([text])
-            feature_names = vectorizer.get_feature_names_out()
-            return list(feature_names)
-        except:
-            # Final fallback: extract capitalized terms
-            return re.findall(r"\b[A-Z][a-zA-Z\s]+\b", text)[:5]
+        # Final fallback: extract capitalized terms
+        return re.findall(r"\b[A-Z][a-zA-Z\s]+\b", text)[:5]
 
     def _generate_questions_local(self, content: str, title: str) -> List[Dict]:
         """Generate questions using local NLP."""
@@ -561,8 +494,21 @@ class HybridAINoteService:
         return list(set(tags))
 
     def _extract_key_concepts_local(self, content: str) -> List[str]:
-        """Extract key concepts using local NLP."""
+        """Extract key concepts using local NLP with spaCy if available."""
         concepts = []
+
+        # Use spaCy for NER if available
+        if self.nlp:
+            try:
+                doc = self.nlp(content)
+                entities = [
+                    ent.text
+                    for ent in doc.ents
+                    if ent.label_ in ["ORG", "PRODUCT", "GPE", "PERSON", "MISC"]
+                ]
+                concepts.extend(entities[:3])
+            except Exception as e:
+                print(f"spaCy NER failed: {e}")
 
         # Find capitalized terms
         capitalized_terms = re.findall(
@@ -576,6 +522,13 @@ class HybridAINoteService:
         quoted_terms = re.findall(r'"([^"]+)"', content)
         concepts.extend(quoted_terms)
 
+        # Find terms after "is a" or "are"
+        definition_patterns = re.findall(
+            r"(?:is\s+a|are\s+a|defined\s+as)\s+([A-Z][a-zA-Z\s]+)", content, re.I
+        )
+        concepts.extend(definition_patterns)
+
+        # Remove duplicates and return
         return list(set(concepts))[:5]
 
     def _create_question_local(self, concept: str, content: str) -> Optional[Dict]:

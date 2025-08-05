@@ -489,3 +489,123 @@ async def get_study_recommendations(
     ]
 
     return recommendations
+
+
+# Individual Content Generation Endpoints
+@router.post("/notes/{note_id}/summary")
+async def generate_note_summary(
+    note_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate AI summary for a specific note."""
+    note = (
+        db.query(KnowledgeNode)
+        .filter(KnowledgeNode.id == note_id, KnowledgeNode.user_id == current_user.id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    try:
+        summary = ai_note_service.generate_summary(note)
+        return {"summary": summary}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate summary: {str(e)}"
+        )
+
+
+@router.post("/notes/{note_id}/quiz")
+async def generate_note_quiz(
+    note_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate AI quiz questions for a specific note."""
+    note = (
+        db.query(KnowledgeNode)
+        .filter(KnowledgeNode.id == note_id, KnowledgeNode.user_id == current_user.id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    try:
+        quiz_questions = ai_note_service.generate_quiz_questions(note)
+        return {"quiz_questions": quiz_questions}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate quiz: {str(e)}"
+        )
+
+
+@router.post("/notes/{note_id}/study-plan")
+async def generate_note_study_plan(
+    note_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate AI study plan for a specific note."""
+    note = (
+        db.query(KnowledgeNode)
+        .filter(KnowledgeNode.id == note_id, KnowledgeNode.user_id == current_user.id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    try:
+        study_plan = ai_note_service.generate_study_plan(note)
+        return {"study_plan": study_plan}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate study plan: {str(e)}"
+        )
+
+
+@router.post("/notes/{note_id}/analysis")
+async def regenerate_note_analysis(
+    note_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Regenerate complete AI analysis for a note."""
+    note = (
+        db.query(KnowledgeNode)
+        .filter(KnowledgeNode.id == note_id, KnowledgeNode.user_id == current_user.id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    try:
+        # Get all notes for connection analysis
+        all_notes = (
+            db.query(KnowledgeNode)
+            .filter(KnowledgeNode.user_id == current_user.id)
+            .all()
+        )
+
+        # Generate complete analysis
+        suggestions = ai_note_service.suggest_connections(note, all_notes, db)
+        quiz_questions = ai_note_service.generate_quiz_questions(note)
+        summary = ai_note_service.generate_summary(note)
+        study_plan = ai_note_service.generate_study_plan(note)
+        ai_analysis = ai_note_service.analyze_content(note.content)
+
+        return {
+            "connection_suggestions": suggestions,
+            "quiz_questions": quiz_questions,
+            "summary": summary,
+            "study_plan": study_plan,
+            "ai_analysis": ai_analysis,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to regenerate analysis: {str(e)}"
+        )

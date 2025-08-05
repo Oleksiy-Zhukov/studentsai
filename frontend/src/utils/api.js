@@ -72,7 +72,7 @@ export const apiCall = async (endpoint, options = {}) => {
           throw new Error(`API call failed: ${retryResponse.status}`);
         }
 
-        return retryResponse;
+        return await retryResponse.json();
       } catch {
         // If refresh fails, redirect to login
         window.location.href = '/study';
@@ -84,7 +84,7 @@ export const apiCall = async (endpoint, options = {}) => {
       throw new Error(`API call failed: ${response.status}`);
     }
 
-    return response;
+    return await response.json();
   } catch (error) {
     console.error('API call error:', error);
     throw error;
@@ -112,6 +112,20 @@ export const api = {
     method: 'POST',
   }),
   createAIConnections: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/connections`, {
+    method: 'POST',
+  }),
+  
+  // Individual AI Content Generation
+  generateSummary: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/summary`, {
+    method: 'POST',
+  }),
+  generateQuiz: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/quiz`, {
+    method: 'POST',
+  }),
+  generateStudyPlan: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/study-plan`, {
+    method: 'POST',
+  }),
+  regenerateAnalysis: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/analysis`, {
     method: 'POST',
   }),
 

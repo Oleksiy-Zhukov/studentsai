@@ -32,8 +32,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
       setLoading(true);
       setError(null);
       
-      const response = await api.getNotes();
-      const data = await response.json();
+      const data = await api.getNotes();
       setNotes(data);
       setLastUpdate(new Date());
     } catch (err) {
@@ -46,8 +45,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
 
   const fetchGraphData = async () => {
     try {
-      const response = await api.getGraph();
-      const data = await response.json();
+      const data = await api.getGraph();
       setGraphData(data);
     } catch (err) {
       console.error('Failed to fetch graph data:', err);
@@ -56,8 +54,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
 
   const handleNoteUpdate = async (updatedNote) => {
     try {
-      const response = await api.updateNote(updatedNote.id, updatedNote);
-      const data = await response.json();
+      const data = await api.updateNote(updatedNote.id, updatedNote);
 
       // Update local state
       setNotes(notes.map(note => 
@@ -79,8 +76,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
 
   const handleNoteCreate = async (newNote) => {
     try {
-      const response = await api.createNote(newNote);
-      const createdNote = await response.json();
+      const createdNote = await api.createNote(newNote);
       
       setNotes([...notes, createdNote]);
       setSelectedNote(createdNote);
