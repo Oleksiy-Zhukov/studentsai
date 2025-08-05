@@ -5,6 +5,8 @@ import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Brain, Link, Target, Sparkles, Zap } from 'lucide-react';
+import { api } from '../utils/api';
 
 export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
   const [title, setTitle] = useState('');
@@ -14,6 +16,9 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
   const [newTag, setNewTag] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState(null);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
 
   // Update local state when note prop changes
   useEffect(() => {
@@ -85,6 +90,39 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
     }
   };
 
+  const getAISuggestions = async () => {
+    if (!note?.id) return;
+    
+    setIsLoadingAI(true);
+    try {
+      const suggestions = await api.getNoteSuggestions(note.id);
+      setAiSuggestions(suggestions);
+      setShowAIPanel(true);
+    } catch (error) {
+      console.error('Failed to get AI suggestions:', error);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
+  const createAIConnections = async () => {
+    if (!note?.id) return;
+    
+    setIsLoadingAI(true);
+    try {
+      const result = await api.createAIConnections(note.id);
+      console.log('AI connections created:', result);
+      // Refresh the note to get updated data
+      if (onNoteUpdate) {
+        onNoteUpdate({ ...note, connections_updated: true });
+      }
+    } catch (error) {
+      console.error('Failed to create AI connections:', error);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
   const renderMarkdownPreview = (text) => {
     // Simple markdown rendering (basic implementation)
     return text
@@ -126,6 +164,30 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
             >
               {showPreview ? 'Edit' : 'Preview'}
             </Button>
+            {note?.id && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={getAISuggestions}
+                  disabled={isLoadingAI}
+                  className="flex items-center space-x-2"
+                >
+                  <Brain className="w-4 h-4" />
+                  {isLoadingAI ? 'Analyzing...' : 'AI Analysis'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={createAIConnections}
+                  disabled={isLoadingAI}
+                  className="flex items-center space-x-2"
+                >
+                  <Link className="w-4 h-4" />
+                  {isLoadingAI ? 'Creating...' : 'Auto-Connect'}
+                </Button>
+              </>
+            )}
             {note?.id && (
               <span className="text-sm text-muted-foreground">
                 Last updated: {new Date(note.updated_at).toLocaleDateString()}
@@ -313,6 +375,75 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
           </div>
         )}
       </div>
+
+      {/* AI Suggestions Panel */}
+      {showAIPanel && aiSuggestions && (
+        <div className="border-t border-border p-4 bg-muted/30">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center space-x-2">
+              <Sparkles className="w-5 h-5" />
+              <span>AI Analysis & Suggestions</span>
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAIPanel(false)}
+            >
+              Close
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Summary */}
+            <Card className="p-4">
+              <h4 className="font-medium mb-2 flex items-center space-x-2">
+                <Target className="w-4 h-4" />
+                <span>Summary</span>
+              </h4>
+              <div className="text-sm text-muted-foreground">
+                {aiSuggestions.summary}
+              </div>
+            </Card>
+
+            {/* Connection Suggestions */}
+            <Card className="p-4">
+              <h4 className="font-medium mb-2 flex items-center space-x-2">
+                <Link className="w-4 h-4" />
+                <span>Suggested Connections ({aiSuggestions.connection_suggestions?.length || 0})</span>
+              </h4>
+              <div className="space-y-2">
+                {aiSuggestions.connection_suggestions?.slice(0, 3).map((suggestion, index) => (
+                  <div key={index} className="text-sm p-2 bg-background rounded border">
+                    <div className="font-medium">{suggestion.relationship_type}</div>
+                    <div className="text-muted-foreground text-xs">
+                      Confidence: {Math.round(suggestion.ai_confidence * 100)}%
+                    </div>
+                    <div className="text-xs">{suggestion.reason}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Quiz Questions */}
+            <Card className="p-4">
+              <h4 className="font-medium mb-2 flex items-center space-x-2">
+                <Zap className="w-4 h-4" />
+                <span>Quiz Questions ({aiSuggestions.quiz_questions?.length || 0})</span>
+              </h4>
+              <div className="space-y-2">
+                {aiSuggestions.quiz_questions?.slice(0, 2).map((question, index) => (
+                  <div key={index} className="text-sm p-2 bg-background rounded border">
+                    <div className="font-medium">{question.question}</div>
+                    <div className="text-muted-foreground text-xs mt-1">
+                      {question.answer.substring(0, 100)}...
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

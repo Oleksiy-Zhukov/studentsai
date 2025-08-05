@@ -135,13 +135,24 @@ class GraphNode(BaseModel):
     id: str
     title: str
     difficulty: str
+    difficulty_score: Optional[float] = None
+    ai_rating: Optional[float] = None
+    tags: List[str] = []
+    keywords: List[str] = []
+    mastery_level: Optional[float] = None
+    review_count: Optional[int] = None
+    created_at: Optional[str] = None
     x: Optional[float] = None
     y: Optional[float] = None
 
 class GraphLink(BaseModel):
     source: str
     target: str
-    value: int = 1
+    type: str = "related"
+    weight: float = 0.5
+    ai_confidence: Optional[float] = None
+    connection_tags: List[str] = []
+    metadata: Dict[str, Any] = {}
 
 class GraphData(BaseModel):
     nodes: List[GraphNode]

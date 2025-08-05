@@ -18,6 +18,7 @@ from models_study import (
     LearningPath,
 )
 from auth_study import get_current_user, create_access_token
+from ai_note_service import AINoteService
 from schemas_study import (
     KnowledgeNodeCreate,
     KnowledgeNodeUpdate,
@@ -36,6 +37,9 @@ from schemas_study import (
 
 router = APIRouter(prefix="/study", tags=["Study Flow"])
 
+# Initialize AI services
+ai_note_service = AINoteService()
+
 
 # Token refresh endpoint
 @router.post("/refresh-token")
@@ -52,21 +56,139 @@ async def create_note(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Create a new knowledge node."""
+    """Create a new knowledge node with AI processing."""
+    # Process note content with AI
+    ai_analysis = ai_note_service.process_note_content(
+        note_data.content or "", note_data.title
+    )
+
+    # Create note with AI-enhanced data
     note = KnowledgeNode(
         user_id=current_user.id,
         title=note_data.title,
         content=note_data.content,
-        difficulty_level=note_data.difficulty_level,
-        tags=note_data.tags,
-        node_metadata={},
+        difficulty_level=ai_analysis["difficulty_level"],
+        difficulty_score=ai_analysis["complexity_score"],
+        ai_rating=ai_analysis["ai_rating"],
+        tags=note_data.tags or ai_analysis["suggested_tags"],
+        keywords=ai_analysis["keywords"],
+        node_metadata={
+            "ai_analysis": ai_analysis,
+            "potential_connections": ai_analysis["potential_connections"],
+        },
     )
 
     db.add(note)
     db.commit()
     db.refresh(note)
 
+    # Generate connection suggestions
+    all_notes = (
+        db.query(KnowledgeNode).filter(KnowledgeNode.user_id == current_user.id).all()
+    )
+    connection_suggestions = ai_note_service.suggest_connections(note, all_notes, db)
+
+    # Store suggestions in metadata for frontend
+    note.node_metadata["connection_suggestions"] = connection_suggestions
+    db.commit()
+
     return KnowledgeNodeResponse.from_orm(note)
+
+
+@router.post("/notes/{note_id}/suggestions")
+async def get_note_suggestions(
+    note_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get AI suggestions for a note (connections, keywords, etc.)."""
+    note = (
+        db.query(KnowledgeNode)
+        .filter(KnowledgeNode.id == note_id, KnowledgeNode.user_id == current_user.id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    # Get all notes for connection suggestions
+    all_notes = (
+        db.query(KnowledgeNode).filter(KnowledgeNode.user_id == current_user.id).all()
+    )
+    connection_suggestions = ai_note_service.suggest_connections(note, all_notes, db)
+
+    # Generate quiz questions
+    quiz_questions = ai_note_service.generate_quiz_questions(note)
+
+    # Generate summary
+    summary = ai_note_service.generate_summary(note)
+
+    return {
+        "connection_suggestions": connection_suggestions,
+        "quiz_questions": quiz_questions,
+        "summary": summary,
+        "ai_analysis": note.node_metadata.get("ai_analysis", {}),
+    }
+
+
+@router.post("/notes/{note_id}/connections")
+async def create_ai_connections(
+    note_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create AI-suggested connections for a note."""
+    note = (
+        db.query(KnowledgeNode)
+        .filter(KnowledgeNode.id == note_id, KnowledgeNode.user_id == current_user.id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    # Get all notes and generate connections
+    all_notes = (
+        db.query(KnowledgeNode).filter(KnowledgeNode.user_id == current_user.id).all()
+    )
+    suggestions = ai_note_service.suggest_connections(note, all_notes, db)
+
+    created_connections = []
+    for suggestion in suggestions[:5]:  # Create top 5 connections
+        # Check if connection already exists
+        existing = (
+            db.query(KnowledgeConnection)
+            .filter(
+                KnowledgeConnection.source_node_id == suggestion["source_node_id"],
+                KnowledgeConnection.target_node_id == suggestion["target_node_id"],
+            )
+            .first()
+        )
+
+        if not existing:
+            connection = KnowledgeConnection(
+                source_node_id=suggestion["source_node_id"],
+                target_node_id=suggestion["target_node_id"],
+                relationship_type=suggestion["relationship_type"],
+                weight=suggestion["weight"],
+                ai_confidence=suggestion["ai_confidence"],
+                connection_tags=suggestion["connection_tags"],
+                connection_metadata={
+                    "reason": suggestion["reason"],
+                    "ai_generated": True,
+                },
+            )
+            db.add(connection)
+            created_connections.append(connection)
+
+    db.commit()
+
+    return {
+        "message": f"Created {len(created_connections)} AI connections",
+        "connections": [
+            KnowledgeConnectionResponse.from_orm(conn) for conn in created_connections
+        ],
+    }
 
 
 @router.get("/notes", response_model=List[KnowledgeNodeResponse])
@@ -173,9 +295,20 @@ async def get_knowledge_graph(
         .all()
     )
 
-    # Convert to graph format
+    # Convert to graph format with enhanced data
     graph_nodes = [
-        {"id": str(node.id), "title": node.title, "difficulty": node.difficulty_level}
+        {
+            "id": str(node.id),
+            "title": node.title,
+            "difficulty": node.difficulty_level,
+            "difficulty_score": node.difficulty_score,
+            "ai_rating": node.ai_rating,
+            "tags": node.tags or [],
+            "keywords": node.keywords or [],
+            "mastery_level": node.mastery_level,
+            "review_count": node.review_count,
+            "created_at": node.created_at.isoformat() if node.created_at else None,
+        }
         for node in nodes
     ]
 
@@ -183,7 +316,11 @@ async def get_knowledge_graph(
         {
             "source": str(conn.source_node_id),
             "target": str(conn.target_node_id),
-            "value": conn.strength,
+            "type": conn.relationship_type,
+            "weight": conn.weight,
+            "ai_confidence": conn.ai_confidence,
+            "connection_tags": conn.connection_tags or [],
+            "metadata": conn.connection_metadata or {},
         }
         for conn in connections
     ]

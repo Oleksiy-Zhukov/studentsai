@@ -107,6 +107,14 @@ export const api = {
     method: 'DELETE',
   }),
 
+  // AI-Powered Features
+  getNoteSuggestions: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/suggestions`, {
+    method: 'POST',
+  }),
+  createAIConnections: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/connections`, {
+    method: 'POST',
+  }),
+
   // Graph
   getGraph: () => apiCall('/api/v1/study/graph'),
 

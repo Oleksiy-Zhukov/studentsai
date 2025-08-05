@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Search, ZoomIn, ZoomOut, RotateCcw, Brain, Link, Target } from 'lucide-react';
 import * as d3 from 'd3';
 
-export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded = false }) => {
+export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded = false, graphData = null }) => {
   const svgRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -127,7 +127,7 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
       .data(filteredLinks)
       .enter()
       .append('line')
-      .attr('stroke', d => this.getConnectionColor(d.type))
+              .attr('stroke', d => getConnectionColor(d.type))
       .attr('stroke-width', d => Math.max(1, d.weight * (isExpanded ? 5 : 3)))
       .attr('stroke-opacity', 0.6)
       .attr('marker-end', d => `url(#arrowhead-${d.type})`)
@@ -153,7 +153,7 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
           l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
         );
       })
-      .on('mouseout', function(_, d) {
+      .on('mouseout', function() {
         const radius = isExpanded ? 30 : 20;
         d3.select(this).select('circle')
           .transition()
@@ -216,6 +216,20 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
 
   // Intelligent connection creation
   const createIntelligentConnections = (nodes) => {
+    // If we have graph data from the API, use it
+    if (graphData && graphData.links && graphData.links.length > 0) {
+      return graphData.links.map(link => ({
+        source: link.source,
+        target: link.target,
+        type: link.type || 'related',
+        weight: link.weight || 0.5,
+        ai_confidence: link.ai_confidence || 0.5,
+        connection_tags: link.connection_tags || [],
+        metadata: link.metadata || {}
+      }));
+    }
+    
+    // Fallback to generating connections if no database links
     const links = [];
     
     for (let i = 0; i < nodes.length; i++) {

@@ -17,10 +17,12 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [graphData, setGraphData] = useState(null);
 
   // Fetch notes on component mount
   useEffect(() => {
     fetchNotes();
+    fetchGraphData();
   }, []);
 
   const fetchNotes = async () => {
@@ -36,6 +38,16 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGraphData = async () => {
+    try {
+      const response = await api.getGraph();
+      const data = await response.json();
+      setGraphData(data);
+    } catch (err) {
+      console.error('Failed to fetch graph data:', err);
     }
   };
 
@@ -138,6 +150,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
               selectedNote={selectedNote}
               onNodeSelect={handleNodeSelect}
               isExpanded={true}
+              graphData={graphData}
             />
           </div>
         </div>
@@ -209,6 +222,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
                     selectedNote={selectedNote}
                     onNodeSelect={handleNodeSelect}
                     isExpanded={false}
+                    graphData={graphData}
                   />
                 </div>
                 
