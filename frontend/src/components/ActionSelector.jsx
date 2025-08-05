@@ -214,7 +214,7 @@ export const ActionSelector = ({
           {/* reCAPTCHA v3 is invisible - no UI needed */}
           <RecaptchaWrapper
             action="submit"
-            onVerify={(token) => {
+            onVerify={() => {
               // Token is automatically handled by the useRecaptcha hook
             }}
             onError={(error) => {

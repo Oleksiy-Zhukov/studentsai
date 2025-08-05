@@ -11,13 +11,42 @@ from models_study import KnowledgeNode, KnowledgeConnection
 from ai_connection_service import AIConnectionService
 import numpy as np
 from datetime import datetime
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import yake
+from openai import OpenAI
+import os
 
 
-class AINoteService:
-    """AI service for intelligent note processing and analysis."""
+class HybridAINoteService:
+    """Hybrid AI service using local models for efficiency and OpenAI for complex tasks."""
 
     def __init__(self):
         self.connection_service = AIConnectionService()
+
+        # Initialize local models (simplified version)
+        self.sentence_model = None  # Will be added later
+        self.nlp = None  # Will be added later
+        print("⚠️ Using simplified AI service - heavy models will be added later")
+
+        # Initialize OpenAI client (only if API key is available)
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if openai_api_key:
+            self.openai_client = OpenAI(api_key=openai_api_key)
+            print("✅ OpenAI client initialized")
+        else:
+            self.openai_client = None
+            print("⚠️ OpenAI API key not found - will use local models only")
+
+        # Initialize YAKE keyword extractor
+        try:
+            self.keyword_extractor = yake.KeywordExtractor(
+                lan="en", n=1, dedupLim=0.9, top=10
+            )
+            print("✅ YAKE keyword extractor initialized")
+        except Exception as e:
+            print(f"⚠️ Could not initialize YAKE: {e}")
+            self.keyword_extractor = None
 
         # Common academic keywords and concepts
         self.academic_keywords = {
@@ -72,6 +101,10 @@ class AINoteService:
                 "variable",
                 "loop",
                 "recursion",
+                "machine learning",
+                "neural networks",
+                "artificial intelligence",
+                "deep learning",
             ],
             "history": [
                 "event",
@@ -112,26 +145,26 @@ class AINoteService:
         ]
 
     def process_note_content(self, content: str, title: str) -> Dict:
-        """Process note content to extract intelligent metadata."""
+        """Process note content using local models for efficiency."""
         full_text = f"{title} {content}"
 
-        # Extract keywords
-        keywords = self._extract_keywords(full_text)
+        # Extract keywords using YAKE (local)
+        keywords = self._extract_keywords_local(full_text)
 
-        # Analyze content complexity
-        complexity_score = self._analyze_complexity(content)
+        # Analyze content complexity (local)
+        complexity_score = self._analyze_complexity_local(content)
 
-        # Extract potential connections
+        # Extract potential connections (local)
         potential_connections = self._extract_potential_connections(content)
 
-        # Determine difficulty level
-        difficulty_level = self._determine_difficulty(complexity_score, keywords)
+        # Determine difficulty level (local)
+        difficulty_level = self._determine_difficulty_local(complexity_score, keywords)
 
-        # Generate AI rating
-        ai_rating = self._calculate_ai_rating(content, keywords, complexity_score)
+        # Generate AI rating (local)
+        ai_rating = self._calculate_ai_rating_local(content, keywords, complexity_score)
 
-        # Extract suggested tags
-        suggested_tags = self._suggest_tags(keywords, content)
+        # Extract suggested tags (local)
+        suggested_tags = self._suggest_tags_local(keywords, content)
 
         return {
             "keywords": keywords,
@@ -158,202 +191,299 @@ class AINoteService:
     def suggest_connections(
         self, note: KnowledgeNode, all_notes: List[KnowledgeNode], db: Session
     ) -> List[Dict]:
-        """Suggest intelligent connections for a new note."""
+        """Suggest connections using TF-IDF similarity (simplified version)."""
         suggestions = []
 
-        # Get AI analysis of the note
-        analysis = self.process_note_content(note.content or "", note.title)
+        if not all_notes:
+            return suggestions
 
-        for target_note in all_notes:
-            if target_note.id == note.id:
-                continue
+        # Use TF-IDF for similarity (simplified approach)
+        try:
+            # Prepare texts for TF-IDF
+            texts = [f"{note.title} {note.content or ''}"]
+            for other_note in all_notes:
+                if other_note.id != note.id:
+                    texts.append(f"{other_note.title} {other_note.content or ''}")
 
-            # Calculate connection strength using multiple strategies
-            connection_score = self._calculate_connection_score(
-                note, target_note, analysis
-            )
+            # Create TF-IDF vectors
+            vectorizer = TfidfVectorizer(max_features=100, stop_words="english")
+            tfidf_matrix = vectorizer.fit_transform(texts)
 
-            if connection_score > 0.1:  # Lower threshold for more connections
-                connection_type = self._determine_connection_type(
-                    note, target_note, connection_score
+            # Calculate similarities
+            similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])
+
+            # Process similarities
+            for i, target_note in enumerate(all_notes):
+                if target_note.id == note.id:
+                    continue
+
+                similarity_score = (
+                    similarities[0][i] if i < len(similarities[0]) else 0.0
                 )
 
-                suggestions.append(
-                    {
-                        "source_node_id": note.id,
-                        "target_node_id": target_note.id,
-                        "relationship_type": connection_type,
-                        "weight": connection_score,
-                        "ai_confidence": connection_score,
-                        "reason": self._generate_connection_reason(
-                            note, target_note, connection_type
-                        ),
-                        "connection_tags": self._generate_connection_tags(
-                            note, target_note
-                        ),
-                    }
-                )
+                # Use local similarity threshold
+                if similarity_score > 0.1:  # Lower threshold for TF-IDF
+                    connection_type = self._determine_connection_type_local(
+                        note, target_note, similarity_score
+                    )
 
-        return suggestions
-
-    def generate_study_recommendations(self, user_id: str, db: Session) -> List[Dict]:
-        """Generate AI-powered study recommendations."""
-        # Get all user's notes
-        notes = db.query(KnowledgeNode).filter(KnowledgeNode.user_id == user_id).all()
-
-        if not notes:
-            return []
-
-        recommendations = []
-
-        # Find unconnected nodes (islands)
-        connected_nodes = set()
-        connections = (
-            db.query(KnowledgeConnection)
-            .filter(KnowledgeConnection.source_node_id.in_([n.id for n in notes]))
-            .all()
-        )
-
-        for conn in connections:
-            connected_nodes.add(conn.source_node_id)
-            connected_nodes.add(conn.target_node_id)
-
-        # Suggest connections for island nodes
-        for note in notes:
-            if note.id not in connected_nodes:
-                suggestions = self.suggest_connections(note, notes, db)
-                if suggestions:
-                    recommendations.append(
+                    suggestions.append(
                         {
-                            "type": "connect_island",
-                            "node_id": note.id,
-                            "node_title": note.title,
-                            "suggestions": suggestions[:3],  # Top 3 suggestions
-                            "priority": "high",
+                            "source_node_id": note.id,
+                            "target_node_id": target_note.id,
+                            "relationship_type": connection_type,
+                            "weight": similarity_score,
+                            "ai_confidence": similarity_score,
+                            "reason": self._generate_connection_reason_local(
+                                note, target_note, connection_type
+                            ),
+                            "connection_tags": self._generate_connection_tags_local(
+                                note, target_note
+                            ),
                         }
                     )
 
-        # Suggest study path based on difficulty progression
-        beginner_notes = [n for n in notes if n.difficulty_level == "beginner"]
-        intermediate_notes = [n for n in notes if n.difficulty_level == "intermediate"]
-        advanced_notes = [n for n in notes if n.difficulty_level == "advanced"]
+        except Exception as e:
+            print(f"Error in connection suggestions: {e}")
 
-        if beginner_notes and intermediate_notes:
+        # Sort by similarity and return top suggestions
+        suggestions.sort(key=lambda x: x["weight"], reverse=True)
+        return suggestions[:10]
+
+    def generate_quiz_questions(self, note: KnowledgeNode) -> List[Dict]:
+        """Generate quiz questions using local models first, OpenAI if available."""
+        questions = []
+        content = note.content or ""
+        title = note.title or ""
+
+        # Try local question generation first
+        local_questions = self._generate_questions_local(content, title)
+        questions.extend(local_questions)
+
+        # If we have OpenAI and want more sophisticated questions, use it
+        if self.openai_client and len(questions) < 3:
+            openai_questions = self._generate_questions_openai(content, title)
+            questions.extend(openai_questions)
+
+        return questions[:5]  # Return top 5 questions
+
+    def generate_summary(
+        self, note: KnowledgeNode, connected_notes: List[KnowledgeNode] = None
+    ) -> str:
+        """Generate summary using local models first, OpenAI for enhanced summaries."""
+        content = note.content or ""
+        title = note.title or ""
+
+        # Generate local summary first
+        local_summary = self._generate_summary_local(note, connected_notes)
+
+        # If user wants enhanced summary and OpenAI is available, use it
+        if self.openai_client and len(content) > 200:  # Only for longer content
+            enhanced_summary = self._generate_summary_openai(content, title)
+            if enhanced_summary:
+                return enhanced_summary
+
+        return local_summary
+
+    def generate_study_recommendations(self, user_id: str, db: Session) -> List[Dict]:
+        """Generate personalized study recommendations."""
+        recommendations = []
+
+        # Get user's notes
+        user_notes = (
+            db.query(KnowledgeNode).filter(KnowledgeNode.created_by == user_id).all()
+        )
+
+        if not user_notes:
+            return recommendations
+
+        # Analyze user's learning patterns
+        difficulty_distribution = {}
+        for note in user_notes:
+            difficulty = note.difficulty_level or "beginner"
+            difficulty_distribution[difficulty] = (
+                difficulty_distribution.get(difficulty, 0) + 1
+            )
+
+        # Generate recommendations based on patterns
+        if difficulty_distribution.get("beginner", 0) > difficulty_distribution.get(
+            "advanced", 0
+        ):
             recommendations.append(
                 {
-                    "type": "progression_path",
-                    "title": "Progress to Intermediate Concepts",
-                    "description": f"You have {len(beginner_notes)} beginner concepts. Ready to explore {len(intermediate_notes)} intermediate topics.",
-                    "suggested_notes": intermediate_notes[:3],
+                    "type": "difficulty_progression",
+                    "title": "Ready for Intermediate Topics",
+                    "description": "You've mastered many beginner concepts. Consider exploring intermediate topics.",
+                    "priority": "high",
+                }
+            )
+
+        # Recommend topics with low review count
+        low_review_notes = [note for note in user_notes if (note.review_count or 0) < 2]
+        if low_review_notes:
+            recommendations.append(
+                {
+                    "type": "review_reminder",
+                    "title": "Review Needed",
+                    "description": f"You have {len(low_review_notes)} notes that need review.",
                     "priority": "medium",
                 }
             )
 
         return recommendations
 
-    def generate_quiz_questions(self, note: KnowledgeNode) -> List[Dict]:
-        """Generate quiz questions based on note content."""
-        questions = []
+    def generate_study_plan(self, note: KnowledgeNode) -> str:
+        """Generate study plan using OpenAI (high-value task)."""
+        if not self.openai_client:
+            return self._generate_study_plan_local(note)
+
         content = note.content or ""
+        title = note.title or ""
+
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert study coach. Create a personalized study plan for the given content.",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Create a study plan for: {title}\n\nContent: {content}",
+                    },
+                ],
+                max_tokens=500,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"OpenAI study plan generation failed: {e}")
+            return self._generate_study_plan_local(note)
+
+    # Local model implementations
+    def _extract_keywords_local(self, text: str) -> List[str]:
+        """Extract keywords using YAKE (local)."""
+        if not self.keyword_extractor:
+            return self._extract_keywords_fallback(text)
+
+        try:
+            keywords = self.keyword_extractor.extract_keywords(text)
+            # YAKE returns (keyword, score) tuples, lower score is better
+            keywords = [kw for kw, score in sorted(keywords, key=lambda x: x[1])[:10]]
+            return keywords
+        except Exception as e:
+            print(f"YAKE keyword extraction failed: {e}")
+            return self._extract_keywords_fallback(text)
+
+    def _extract_keywords_fallback(self, text: str) -> List[str]:
+        """Fallback keyword extraction using basic NLP."""
+        # Basic keyword extraction using TF-IDF
+        try:
+            vectorizer = TfidfVectorizer(max_features=10, stop_words="english")
+            tfidf_matrix = vectorizer.fit_transform([text])
+            feature_names = vectorizer.get_feature_names_out()
+            return list(feature_names)
+        except:
+            # Final fallback: extract capitalized terms
+            return re.findall(r"\b[A-Z][a-zA-Z\s]+\b", text)[:5]
+
+    def _generate_questions_local(self, content: str, title: str) -> List[Dict]:
+        """Generate questions using local NLP."""
+        questions = []
 
         # Extract key concepts
-        key_concepts = self._extract_key_concepts(content)
+        key_concepts = self._extract_key_concepts_local(content)
+        if title and title not in key_concepts:
+            key_concepts.insert(0, title)
 
-        for concept in key_concepts[:3]:  # Generate up to 3 questions
-            question = self._create_question_from_concept(concept, content)
+        for concept in key_concepts[:3]:
+            question = self._create_question_local(concept, content)
             if question:
                 questions.append(question)
 
         return questions
 
-    def generate_summary(
+    def _generate_questions_openai(self, content: str, title: str) -> List[Dict]:
+        """Generate questions using OpenAI."""
+        if not self.openai_client:
+            return []
+
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Generate 2-3 quiz questions about the given content. Return as JSON array with 'question', 'answer', 'concept', 'type' fields.",
+                    },
+                    {"role": "user", "content": f"Title: {title}\nContent: {content}"},
+                ],
+                max_tokens=300,
+                temperature=0.7,
+            )
+
+            # Parse JSON response
+            import json
+
+            questions_text = response.choices[0].message.content
+            questions = json.loads(questions_text)
+            return questions
+        except Exception as e:
+            print(f"OpenAI question generation failed: {e}")
+            return []
+
+    def _generate_summary_local(
         self, note: KnowledgeNode, connected_notes: List[KnowledgeNode] = None
     ) -> str:
-        """Generate AI summary of a note and its connections."""
+        """Generate summary using local NLP."""
         content = note.content or ""
+        title = note.title or ""
 
-        # Basic summary generation
+        # Basic summary using extractive approach
         sentences = re.split(r"[.!?]+", content)
-        key_sentences = self._extract_key_sentences(sentences)
+        key_sentences = self._extract_key_sentences_local(sentences)
 
-        summary = f"**{note.title}**\n\n"
-        summary += " ".join(key_sentences[:3]) + ".\n\n"
+        summary = f"**{title}**\n\n"
+        if key_sentences:
+            summary += " ".join(key_sentences[:3]) + ".\n\n"
+        else:
+            summary += f"{content[:200]}...\n\n"
 
-        if connected_notes:
-            summary += f"**Related Concepts:**\n"
-            for connected in connected_notes[:3]:
-                summary += f"- {connected.title}\n"
+        # Add metadata
+        if note.difficulty_level:
+            summary += f"**Difficulty:** {note.difficulty_level.title()}\n"
+        if note.ai_rating:
+            summary += f"**AI Rating:** {note.ai_rating:.1%}\n"
 
         return summary
 
-    def _extract_keywords(self, text: str) -> List[str]:
-        """Extract important keywords from text."""
-        # Remove common words
-        stop_words = {
-            "the",
-            "a",
-            "an",
-            "and",
-            "or",
-            "but",
-            "in",
-            "on",
-            "at",
-            "to",
-            "for",
-            "of",
-            "with",
-            "by",
-            "is",
-            "are",
-            "was",
-            "were",
-            "be",
-            "been",
-            "being",
-            "have",
-            "has",
-            "had",
-            "do",
-            "does",
-            "did",
-            "will",
-            "would",
-            "could",
-            "should",
-            "may",
-            "might",
-            "must",
-            "can",
-            "this",
-            "that",
-            "these",
-            "those",
-        }
+    def _generate_summary_openai(self, content: str, title: str) -> str:
+        """Generate enhanced summary using OpenAI."""
+        if not self.openai_client:
+            return ""
 
-        # Extract words
-        words = re.findall(r"\b[a-zA-Z]+\b", text.lower())
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Create a clear, concise summary of the given content. Use markdown formatting.",
+                    },
+                    {"role": "user", "content": f"Title: {title}\nContent: {content}"},
+                ],
+                max_tokens=300,
+                temperature=0.5,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"OpenAI summary generation failed: {e}")
+            return ""
 
-        # Filter and count
-        word_counts = {}
-        for word in words:
-            if word not in stop_words and len(word) > 2:
-                word_counts[word] = word_counts.get(word, 0) + 1
-
-        # Add academic keywords if found
-        for category, keywords in self.academic_keywords.items():
-            for keyword in keywords:
-                if keyword in text.lower():
-                    word_counts[keyword] = (
-                        word_counts.get(keyword, 0) + 2
-                    )  # Higher weight
-
-        # Return top keywords
-        sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-        return [word for word, count in sorted_words[:10]]
-
-    def _analyze_complexity(self, content: str) -> float:
-        """Analyze content complexity."""
+    # Helper methods (keeping existing ones but making them local-focused)
+    def _analyze_complexity_local(self, content: str) -> float:
+        """Analyze content complexity using local metrics."""
         if not content:
             return 0.0
 
@@ -381,18 +511,10 @@ class AINoteService:
 
         return min(complexity, 1.0)
 
-    def _extract_potential_connections(self, content: str) -> List[str]:
-        """Extract potential connection phrases from content."""
-        connections = []
-        for phrase in self.connection_phrases:
-            matches = re.findall(phrase, content, re.I)
-            connections.extend(matches)
-        return connections
-
-    def _determine_difficulty(
+    def _determine_difficulty_local(
         self, complexity_score: float, keywords: List[str]
     ) -> str:
-        """Determine difficulty level based on complexity and keywords."""
+        """Determine difficulty level using local analysis."""
         if complexity_score > 0.7:
             return "advanced"
         elif complexity_score > 0.4:
@@ -400,11 +522,10 @@ class AINoteService:
         else:
             return "beginner"
 
-    def _calculate_ai_rating(
+    def _calculate_ai_rating_local(
         self, content: str, keywords: List[str], complexity: float
     ) -> float:
-        """Calculate AI confidence rating for content quality."""
-        # Factors: content length, keyword density, complexity balance
+        """Calculate AI rating using local metrics."""
         word_count = len(content.split())
         keyword_density = len(keywords) / max(word_count, 1)
 
@@ -419,8 +540,8 @@ class AINoteService:
 
         return min(rating, 1.0)
 
-    def _suggest_tags(self, keywords: List[str], content: str) -> List[str]:
-        """Suggest tags based on keywords and content."""
+    def _suggest_tags_local(self, keywords: List[str], content: str) -> List[str]:
+        """Suggest tags using local analysis."""
         tags = []
 
         # Add category tags based on keywords
@@ -429,7 +550,7 @@ class AINoteService:
                 tags.append(category)
 
         # Add difficulty tag
-        complexity = self._analyze_complexity(content)
+        complexity = self._analyze_complexity_local(content)
         if complexity > 0.7:
             tags.append("advanced")
         elif complexity > 0.4:
@@ -439,160 +560,17 @@ class AINoteService:
 
         return list(set(tags))
 
-    def _calculate_connection_score(
-        self, note1: KnowledgeNode, note2: KnowledgeNode, analysis: Dict
-    ) -> float:
-        """Calculate connection strength between two notes."""
-        # Multiple similarity metrics
-        keyword_similarity = self._calculate_keyword_similarity(note1, note2)
-        content_similarity = self._calculate_content_similarity(note1, note2)
-        tag_similarity = self._calculate_tag_similarity(note1, note2)
-        difficulty_relationship = self._analyze_difficulty_relationship(note1, note2)
-
-        # Weighted combination
-        score = (
-            keyword_similarity * 0.4
-            + content_similarity * 0.3
-            + tag_similarity * 0.2
-            + difficulty_relationship * 0.1
-        )
-
-        return min(score, 1.0)
-
-    def _calculate_keyword_similarity(
-        self, note1: KnowledgeNode, note2: KnowledgeNode
-    ) -> float:
-        """Calculate similarity based on keywords."""
-        # Get keywords from node_metadata if available, otherwise from direct field
-        keywords1 = set()
-        if note1.node_metadata and "ai_analysis" in note1.node_metadata:
-            keywords1 = set(note1.node_metadata["ai_analysis"].get("keywords", []))
-        elif note1.keywords:
-            keywords1 = set(note1.keywords)
-
-        keywords2 = set()
-        if note2.node_metadata and "ai_analysis" in note2.node_metadata:
-            keywords2 = set(note2.node_metadata["ai_analysis"].get("keywords", []))
-        elif note2.keywords:
-            keywords2 = set(note2.keywords)
-
-        if not keywords1 or not keywords2:
-            return 0.0
-
-        intersection = keywords1.intersection(keywords2)
-        union = keywords1.union(keywords2)
-
-        return len(intersection) / len(union) if union else 0.0
-
-    def _calculate_content_similarity(
-        self, note1: KnowledgeNode, note2: KnowledgeNode
-    ) -> float:
-        """Calculate similarity based on content overlap."""
-        content1 = (note1.content or "").lower()
-        content2 = (note2.content or "").lower()
-
-        if not content1 or not content2:
-            return 0.0
-
-        words1 = set(re.findall(r"\b[a-zA-Z]+\b", content1))
-        words2 = set(re.findall(r"\b[a-zA-Z]+\b", content2))
-
-        intersection = words1.intersection(words2)
-        union = words1.union(words2)
-
-        return len(intersection) / len(union) if union else 0.0
-
-    def _calculate_tag_similarity(
-        self, note1: KnowledgeNode, note2: KnowledgeNode
-    ) -> float:
-        """Calculate similarity based on tag overlap."""
-        tags1 = set(note1.tags or [])
-        tags2 = set(note2.tags or [])
-
-        if not tags1 or not tags2:
-            return 0.0
-
-        intersection = tags1.intersection(tags2)
-        union = tags1.union(tags2)
-
-        return len(intersection) / len(union) if union else 0.0
-
-    def _analyze_difficulty_relationship(
-        self, note1: KnowledgeNode, note2: KnowledgeNode
-    ) -> float:
-        """Analyze relationship based on difficulty levels."""
-        difficulty_map = {"beginner": 1, "intermediate": 2, "advanced": 3}
-
-        diff1 = difficulty_map.get(note1.difficulty_level, 1)
-        diff2 = difficulty_map.get(note2.difficulty_level, 1)
-
-        if diff1 < diff2:
-            return 0.8  # Prerequisite relationship
-        elif diff1 == diff2:
-            return 0.6  # Related at same level
-        else:
-            return 0.3  # Less common
-
-    def _determine_connection_type(
-        self, note1: KnowledgeNode, note2: KnowledgeNode, score: float
-    ) -> str:
-        """Determine the type of connection between nodes."""
-        difficulty_map = {"beginner": 1, "intermediate": 2, "advanced": 3}
-        diff1 = difficulty_map.get(note1.difficulty_level, 1)
-        diff2 = difficulty_map.get(note2.difficulty_level, 1)
-
-        if diff1 < diff2:
-            return "prerequisite"
-        elif score > 0.8:
-            return "related"
-        elif score > 0.6:
-            return "derives_from"
-        elif score > 0.4:
-            return "enhances"
-        else:
-            return "related"
-
-    def _generate_connection_reason(
-        self, note1: KnowledgeNode, note2: KnowledgeNode, connection_type: str
-    ) -> str:
-        """Generate human-readable reason for connection."""
-        if connection_type == "prerequisite":
-            return (
-                f"Understanding {note1.title} is required before learning {note2.title}"
-            )
-        elif connection_type == "related":
-            return (
-                f"Both notes cover related concepts in {note1.difficulty_level} level"
-            )
-        elif connection_type == "derives_from":
-            return f"{note2.title} builds upon concepts from {note1.title}"
-        else:
-            return f"Shared concepts and keywords between the notes"
-
-    def _generate_connection_tags(
-        self, note1: KnowledgeNode, note2: KnowledgeNode
-    ) -> List[str]:
-        """Generate tags for the connection."""
-        tags = []
-
-        # Add common tags
-        common_tags = set(note1.tags or []).intersection(set(note2.tags or []))
-        tags.extend(list(common_tags))
-
-        # Add difficulty-based tags
-        if note1.difficulty_level != note2.difficulty_level:
-            tags.append("difficulty_transition")
-
-        return tags
-
-    def _extract_key_concepts(self, content: str) -> List[str]:
-        """Extract key concepts from content for quiz generation."""
-        # Look for definitions and important terms
+    def _extract_key_concepts_local(self, content: str) -> List[str]:
+        """Extract key concepts using local NLP."""
         concepts = []
 
-        # Find capitalized terms (potential concepts)
-        capitalized_terms = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", content)
-        concepts.extend(capitalized_terms[:5])
+        # Find capitalized terms
+        capitalized_terms = re.findall(
+            r"\b[A-Z][a-zA-Z\s]+(?:[A-Z][a-zA-Z\s]+)*\b", content
+        )
+        concepts.extend(
+            [term.strip() for term in capitalized_terms if len(term.strip()) > 2]
+        )
 
         # Find terms in quotes
         quoted_terms = re.findall(r'"([^"]+)"', content)
@@ -600,17 +578,14 @@ class AINoteService:
 
         return list(set(concepts))[:5]
 
-    def _create_question_from_concept(
-        self, concept: str, content: str
-    ) -> Optional[Dict]:
-        """Create a quiz question from a concept."""
+    def _create_question_local(self, concept: str, content: str) -> Optional[Dict]:
+        """Create a question using local NLP."""
         if not concept or len(concept) < 3:
             return None
 
-        # Simple question generation
         question = f"What is {concept}?"
 
-        # Extract potential answers from content
+        # Find relevant sentences
         sentences = re.split(r"[.!?]+", content)
         relevant_sentences = [s for s in sentences if concept.lower() in s.lower()]
 
@@ -625,24 +600,101 @@ class AINoteService:
 
         return None
 
-    def _extract_key_sentences(self, sentences: List[str]) -> List[str]:
-        """Extract key sentences for summary generation."""
-        # Simple heuristic: longer sentences with key terms
+    def _extract_key_sentences_local(self, sentences: List[str]) -> List[str]:
+        """Extract key sentences using local analysis."""
         scored_sentences = []
 
         for sentence in sentences:
             if len(sentence.strip()) < 10:
                 continue
 
-            # Score based on length and presence of key terms
             score = len(sentence.split()) * 0.1
 
-            # Bonus for sentences with definitions
             if re.search(r"is\s+a|are\s+a|defined\s+as", sentence, re.I):
                 score += 2
 
             scored_sentences.append((sentence.strip(), score))
 
-        # Return top sentences
         scored_sentences.sort(key=lambda x: x[1], reverse=True)
         return [s[0] for s in scored_sentences[:3]]
+
+    def _determine_connection_type_local(
+        self, note1: KnowledgeNode, note2: KnowledgeNode, similarity: float
+    ) -> str:
+        """Determine connection type using local analysis."""
+        difficulty_map = {"beginner": 1, "intermediate": 2, "advanced": 3}
+        diff1 = difficulty_map.get(note1.difficulty_level, 1)
+        diff2 = difficulty_map.get(note2.difficulty_level, 1)
+
+        if diff1 < diff2:
+            return "prerequisite"
+        elif similarity > 0.8:
+            return "related"
+        elif similarity > 0.6:
+            return "derives_from"
+        elif similarity > 0.4:
+            return "enhances"
+        else:
+            return "related"
+
+    def _generate_connection_reason_local(
+        self, note1: KnowledgeNode, note2: KnowledgeNode, connection_type: str
+    ) -> str:
+        """Generate connection reason using local analysis."""
+        if connection_type == "prerequisite":
+            return (
+                f"Understanding {note1.title} is required before learning {note2.title}"
+            )
+        elif connection_type == "related":
+            return (
+                f"Both notes cover related concepts in {note1.difficulty_level} level"
+            )
+        elif connection_type == "derives_from":
+            return f"{note2.title} builds upon concepts from {note1.title}"
+        else:
+            return f"Shared concepts and keywords between the notes"
+
+    def _generate_connection_tags_local(
+        self, note1: KnowledgeNode, note2: KnowledgeNode
+    ) -> List[str]:
+        """Generate connection tags using local analysis."""
+        tags = []
+
+        # Add common tags
+        common_tags = set(note1.tags or []).intersection(set(note2.tags or []))
+        tags.extend(list(common_tags))
+
+        # Add difficulty-based tags
+        if note1.difficulty_level != note2.difficulty_level:
+            tags.append("difficulty_transition")
+
+        return tags
+
+    def _generate_study_plan_local(self, note: KnowledgeNode) -> str:
+        """Generate basic study plan using local analysis."""
+        content = note.content or ""
+        title = note.title or ""
+
+        plan = f"## Study Plan for {title}\n\n"
+        plan += "### 1. Review Key Concepts\n"
+        plan += "- Read through the content carefully\n"
+        plan += "- Identify main ideas and supporting details\n\n"
+
+        plan += "### 2. Practice Activities\n"
+        plan += "- Create flashcards for key terms\n"
+        plan += "- Summarize the content in your own words\n"
+        plan += "- Discuss with peers or study group\n\n"
+
+        plan += "### 3. Assessment\n"
+        plan += "- Test your understanding with practice questions\n"
+        plan += "- Review any areas of confusion\n\n"
+
+        return plan
+
+    def _extract_potential_connections(self, content: str) -> List[str]:
+        """Extract potential connection phrases from content."""
+        connections = []
+        for pattern in self.connection_phrases:
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            connections.extend(matches)
+        return connections

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, ZoomIn, ZoomOut, RotateCcw, Brain, Link, Target } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Search, ZoomIn, ZoomOut, RotateCcw, Brain, Link, Target, Sparkles, Info, TrendingUp, Clock, Star } from 'lucide-react';
 import * as d3 from 'd3';
 
 export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded = false, graphData = null }) => {
@@ -11,6 +12,9 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
   const [zoomLevel, setZoomLevel] = useState(1);
   const [filteredNotes, setFilteredNotes] = useState(notes);
   const [connectionType, setConnectionType] = useState('all'); // all, manual, ai, prerequisite
+  const [hoveredNode, setHoveredNode] = useState(null);
+  const [hoveredConnection, setHoveredConnection] = useState(null);
+  const [showAIIndicators, setShowAIIndicators] = useState(true);
 
   // Filter notes based on search term
   useEffect(() => {
@@ -38,7 +42,6 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
     const container = svg.parentElement;
     const width = isExpanded ? container.clientWidth : 320;
     const height = isExpanded ? container.clientHeight : 300;
-    const margin = isExpanded ? 50 : 20;
 
     // Create SVG with zoom support
     const svgElement = d3.select(svg)
@@ -89,7 +92,7 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
     });
 
     // Create nodes data with enhanced properties
-    const nodes = filteredNotes.map((note, index) => ({
+    const nodes = filteredNotes.map((note) => ({
       id: note.id,
       title: note.title,
       difficulty: note.difficulty_level || 'beginner',
@@ -100,13 +103,12 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
       ai_rating: note.ai_rating || 0.5,
       mastery_level: note.mastery_level || 0.0,
       review_count: note.review_count || 0,
-      last_reviewed: note.last_reviewed,
       created_at: note.created_at,
-      x: margin + (index % 3) * 80,
-      y: margin + Math.floor(index / 3) * 80
+      last_reviewed: note.last_reviewed,
+      node_metadata: note.node_metadata || {}
     }));
 
-    // Create intelligent connections using multiple strategies
+    // Create connections
     const links = createIntelligentConnections(nodes);
 
     // Filter connections based on type
@@ -114,87 +116,86 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
       ? links 
       : links.filter(link => link.type === connectionType);
 
-    // Create force simulation with adjusted parameters for expanded mode
+    // Create force simulation
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(filteredLinks).id(d => d.id).distance(isExpanded ? 150 : 100))
-      .force('charge', d3.forceManyBody().strength(isExpanded ? -500 : -300))
+      .force('link', d3.forceLink(filteredLinks).id(d => d.id).distance(isExpanded ? 150 : 80))
+      .force('charge', d3.forceManyBody().strength(isExpanded ? -300 : -150))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(isExpanded ? 40 : 30));
+      .force('collision', d3.forceCollide().radius(isExpanded ? 40 : 25));
 
-    // Draw links with different styles based on type
+    // Create links
     const link = g.append('g')
       .selectAll('line')
       .data(filteredLinks)
       .enter()
       .append('line')
-              .attr('stroke', d => getConnectionColor(d.type))
-      .attr('stroke-width', d => Math.max(1, d.weight * (isExpanded ? 5 : 3)))
-      .attr('stroke-opacity', 0.6)
+      .attr('stroke', d => getConnectionColor(d.type))
+      .attr('stroke-width', d => Math.max(1, d.weight * 3))
+      .attr('stroke-dasharray', d => d.type === 'prerequisite' ? '5,5' : 'none')
       .attr('marker-end', d => `url(#arrowhead-${d.type})`)
-      .style('stroke-dasharray', d => d.type === 'prerequisite' ? '5,5' : 'none');
+      .style('opacity', 0.6)
+      .on('mouseover', (event, d) => {
+        setHoveredConnection(d);
+        d3.select(event.target).style('opacity', 1).style('stroke-width', Math.max(2, d.weight * 4));
+      })
+             .on('mouseout', (event) => {
+         setHoveredConnection(null);
+         d3.select(event.target).style('opacity', 0.6).style('stroke-width', 2);
+       });
 
-    // Draw nodes with enhanced styling
+    // Create nodes
     const node = g.append('g')
       .selectAll('g')
       .data(nodes)
       .enter()
       .append('g')
       .style('cursor', 'pointer')
-      .on('click', (event, d) => onNodeSelect(d.id))
-      .on('mouseover', function(_, d) {
-        const radius = isExpanded ? 35 : 25;
-        d3.select(this).select('circle')
-          .transition()
-          .duration(200)
-          .attr('r', radius);
-        
-        // Highlight connected links
-        link.style('stroke-opacity', l => 
-          l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
-        );
+      .on('click', (event, d) => {
+        onNodeSelect(d.id);
       })
-      .on('mouseout', function() {
-        const radius = isExpanded ? 30 : 20;
-        d3.select(this).select('circle')
-          .transition()
-          .duration(200)
-          .attr('r', radius);
-        
-        // Reset link opacity
-        link.style('stroke-opacity', 0.6);
-      });
+      .on('mouseover', (event, d) => {
+        setHoveredNode(d);
+        d3.select(event.currentTarget).select('circle').style('stroke-width', 3);
+      })
+             .on('mouseout', (event) => {
+         setHoveredNode(null);
+         d3.select(event.currentTarget).select('circle').style('stroke-width', 2);
+       });
 
-    // Add circles to nodes with size based on importance
-    const nodeRadius = isExpanded ? 30 : 20;
+    // Add main node circle
     node.append('circle')
-      .attr('r', d => nodeRadius * (1 + d.ai_rating * 0.5)) // Size based on AI rating
+      .attr('r', d => Math.max(8, d.ai_rating * 20))
       .attr('fill', d => getNodeColor(d.difficulty))
-      .attr('stroke', d => selectedNote?.id === d.id ? 'hsl(var(--foreground))' : 'hsl(var(--border))')
-      .attr('stroke-width', d => selectedNote?.id === d.id ? 3 : 2)
+      .attr('stroke', d => d.id === selectedNote?.id ? '#3b82f6' : '#374151')
+      .attr('stroke-width', d => d.id === selectedNote?.id ? 3 : 2)
       .style('transition', 'all 0.2s ease');
 
-    // Add mastery indicator (inner circle)
+    // Add inner circle for mastery level
     node.append('circle')
-      .attr('r', d => (nodeRadius * 0.6) * (1 + d.ai_rating * 0.5))
-      .attr('fill', 'none')
-      .attr('stroke', d => getMasteryColor(d.mastery_level))
-      .attr('stroke-width', 2)
-      .attr('stroke-dasharray', d => `${2 * Math.PI * (nodeRadius * 0.6) * d.mastery_level} ${2 * Math.PI * (nodeRadius * 0.6)}`)
-      .style('transform', 'rotate(-90deg)');
+      .attr('r', d => Math.max(4, d.ai_rating * 12))
+      .attr('fill', d => getMasteryColor(d.mastery_level))
+      .attr('stroke', 'none')
+      .style('opacity', 0.8);
 
-    // Add text to nodes
-    const fontSize = isExpanded ? '14px' : '10px';
+    // Add AI indicator for AI-generated content
+    if (showAIIndicators) {
+      node.append('circle')
+        .attr('r', 3)
+        .attr('fill', '#8b5cf6')
+        .attr('stroke', 'none')
+        .style('opacity', d => d.ai_rating > 0.7 ? 1 : 0.3)
+        .attr('transform', 'translate(8, -8)');
+    }
+
+    // Add node labels
     node.append('text')
+      .text(d => d.title.length > 15 ? d.title.substring(0, 15) + '...' : d.title)
       .attr('text-anchor', 'middle')
-      .attr('dy', '0.35em')
-      .attr('font-size', fontSize)
-      .attr('font-weight', 'bold')
-      .attr('fill', '#fff')
-      .text(d => d.title.charAt(0).toUpperCase());
-
-    // Add enhanced tooltips
-    node.append('title')
-      .text(d => createNodeTooltip(d));
+      .attr('dy', d => Math.max(12, d.ai_rating * 20) + 15)
+      .style('font-size', isExpanded ? '12px' : '10px')
+      .style('font-weight', '500')
+      .style('fill', 'hsl(var(--foreground))')
+      .style('pointer-events', 'none');
 
     // Update positions on simulation tick
     simulation.on('tick', () => {
@@ -212,7 +213,7 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
       simulation.stop();
     };
 
-  }, [filteredNotes, selectedNote, onNodeSelect, isExpanded, connectionType]);
+  }, [filteredNotes, selectedNote, onNodeSelect, isExpanded, connectionType, showAIIndicators]);
 
   // Intelligent connection creation
   const createIntelligentConnections = (nodes) => {
@@ -306,13 +307,13 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
   };
 
   const calculateContentSimilarity = (node1, node2) => {
-    const content1 = (node1.content || "").toLowerCase();
-    const content2 = (node2.content || "").toLowerCase();
+    const content1 = (node1.content || '').toLowerCase();
+    const content2 = (node2.content || '').toLowerCase();
     
     if (!content1 || !content2) return 0;
     
-    const words1 = new Set(content1.match(/\b[a-zA-Z]+\b/g) || []);
-    const words2 = new Set(content2.match(/\b[a-zA-Z]+\b/g) || []);
+    const words1 = new Set(content1.split(/\s+/));
+    const words2 = new Set(content2.split(/\s+/));
     
     const intersection = new Set([...words1].filter(x => words2.has(x)));
     const union = new Set([...words1, ...words2]);
@@ -325,35 +326,38 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
     const diff1 = difficultyMap[node1.difficulty] || 1;
     const diff2 = difficultyMap[node2.difficulty] || 1;
     
-    if (diff1 < diff2) return 0.8; // Prerequisite
-    else if (diff1 === diff2) return 0.6; // Related
+    if (diff1 < diff2) return 0.8; // Prerequisite relationship
+    else if (diff1 === diff2) return 0.5; // Same level
     else return 0.3; // Less common
   };
 
   const analyzeTemporalRelationship = (node1, node2) => {
-    const time1 = new Date(node1.created_at).getTime();
-    const time2 = new Date(node2.created_at).getTime();
-    const timeDiff = Math.abs(time1 - time2) / (1000 * 60 * 60); // hours
+    // Simple temporal analysis based on creation dates
+    if (!node1.created_at || !node2.created_at) return 0.5;
     
-    if (timeDiff < 24) return 0.7;
-    else if (timeDiff < 168) return 0.5; // week
-    else return 0.2;
+    const date1 = new Date(node1.created_at);
+    const date2 = new Date(node2.created_at);
+    const diffDays = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24);
+    
+    return diffDays < 7 ? 0.7 : 0.3; // Higher similarity if created within a week
   };
 
   const calculateOverallSimilarity = (keyword, tag, content, difficulty, temporal) => {
-    const weights = { keyword: 0.3, tag: 0.2, content: 0.25, difficulty: 0.15, temporal: 0.1 };
-    
     return (
-      keyword * weights.keyword +
-      tag * weights.tag +
-      content * weights.content +
-      difficulty * weights.difficulty +
-      temporal * weights.temporal
+      keyword * 0.4 +
+      tag * 0.3 +
+      content * 0.2 +
+      difficulty * 0.1 +
+      temporal * 0.1
     );
   };
 
-  const determineConnectionType = (source, target, similarity, difficultyRel) => {
-    if (difficultyRel > 0.7) return 'prerequisite';
+  const determineConnectionType = (source, target, similarity) => {
+    const difficultyMap = { 'beginner': 1, 'intermediate': 2, 'advanced': 3 };
+    const diff1 = difficultyMap[source.difficulty] || 1;
+    const diff2 = difficultyMap[target.difficulty] || 1;
+    
+    if (diff1 < diff2) return 'prerequisite';
     else if (similarity > 0.8) return 'related';
     else if (similarity > 0.6) return 'derives_from';
     else if (similarity > 0.4) return 'enhances';
@@ -372,32 +376,18 @@ export const KnowledgeGraph = ({ notes, selectedNote, onNodeSelect, isExpanded =
   };
 
   const getNodeColor = (difficulty) => {
-    switch (difficulty) {
-      case 'beginner':
-        return '#10b981';
-      case 'intermediate':
-        return '#f59e0b';
-      case 'advanced':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  };
-
-  const getMasteryColor = (masteryLevel) => {
-    if (masteryLevel > 0.8) return '#10b981';
-    else if (masteryLevel > 0.5) return '#f59e0b';
+    if (difficulty === 'beginner') return '#10b981';
+    else if (difficulty === 'intermediate') return '#f59e0b';
     else return '#ef4444';
   };
 
-  const createNodeTooltip = (node) => {
-    return `${node.title} (${node.difficulty})
-Mastery: ${Math.round(node.mastery_level * 100)}%
-AI Rating: ${Math.round(node.ai_rating * 100)}%
-Reviews: ${node.review_count}
-Tags: ${node.tags.join(', ')}
-Keywords: ${node.keywords.join(', ')}`;
+  const getMasteryColor = (masteryLevel) => {
+    if (masteryLevel >= 0.8) return '#10b981';
+    else if (masteryLevel >= 0.5) return '#f59e0b';
+    else return '#ef4444';
   };
+
+
 
   const handleZoomIn = () => {
     const svg = d3.select(svgRef.current).select('svg');
@@ -463,6 +453,18 @@ Keywords: ${node.keywords.join(', ')}`;
             <option value="enhances">Enhances</option>
           </select>
 
+          {/* AI Indicators Toggle */}
+          <Button
+            variant={showAIIndicators ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowAIIndicators(!showAIIndicators)}
+            className="flex items-center space-x-1"
+            title="Toggle AI Indicators"
+          >
+            <Brain className="w-3 h-3" />
+            <span className="text-xs">AI</span>
+          </Button>
+
           {/* Zoom Controls */}
           <div className="flex items-center space-x-1">
             <Button
@@ -499,12 +501,18 @@ Keywords: ${node.keywords.join(', ')}`;
           </span>
         </div>
 
-        {/* Legend */}
-        <div className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm rounded-lg p-3 border border-border">
-          <h4 className="text-sm font-semibold japanese-text text-foreground mb-2">Legend</h4>
-          <div className="space-y-2 text-xs">
+        {/* Enhanced Legend */}
+        <div className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm rounded-lg p-3 border border-border max-w-xs">
+          <h4 className="text-sm font-semibold japanese-text text-foreground mb-2 flex items-center space-x-2">
+            <Info className="w-4 h-4" />
+            <span>Legend</span>
+          </h4>
+          <div className="space-y-3 text-xs">
             <div className="space-y-1">
-              <h5 className="font-medium">Difficulty</h5>
+              <h5 className="font-medium flex items-center space-x-1">
+                <Target className="w-3 h-3" />
+                <span>Difficulty</span>
+              </h5>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 <span className="japanese-text">Beginner</span>
@@ -519,7 +527,10 @@ Keywords: ${node.keywords.join(', ')}`;
               </div>
             </div>
             <div className="space-y-1">
-              <h5 className="font-medium">Connections</h5>
+              <h5 className="font-medium flex items-center space-x-1">
+                <Link className="w-3 h-3" />
+                <span>Connections</span>
+              </h5>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-0.5 bg-red-500" style={{borderTop: '2px dashed #ef4444'}}></div>
                 <span className="japanese-text">Prerequisite</span>
@@ -533,8 +544,106 @@ Keywords: ${node.keywords.join(', ')}`;
                 <span className="japanese-text">Derives From</span>
               </div>
             </div>
+            <div className="space-y-1">
+              <h5 className="font-medium flex items-center space-x-1">
+                <Sparkles className="w-3 h-3" />
+                <span>AI Features</span>
+              </h5>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                <span className="japanese-text">AI Enhanced</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500 opacity-50"></div>
+                <span className="japanese-text">Mastery Level</span>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Enhanced Tooltip */}
+        {(hoveredNode || hoveredConnection) && (
+          <div className="absolute z-20 bg-background/95 backdrop-blur-sm rounded-lg p-3 border border-border shadow-lg max-w-xs">
+            {hoveredNode && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm flex items-center space-x-2">
+                  <Target className="w-4 h-4" />
+                  <span>{hoveredNode.title}</span>
+                </h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Difficulty:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {hoveredNode.difficulty}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">AI Rating:</span>
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-3 h-3 text-yellow-500" />
+                      <span>{Math.round(hoveredNode.ai_rating * 100)}%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Mastery:</span>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="w-3 h-3 text-green-500" />
+                      <span>{Math.round(hoveredNode.mastery_level * 100)}%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Reviews:</span>
+                    <div className="flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-blue-500" />
+                      <span>{hoveredNode.review_count}</span>
+                    </div>
+                  </div>
+                  {hoveredNode.tags.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Tags:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {hoveredNode.tags.slice(0, 3).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {hoveredConnection && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm flex items-center space-x-2">
+                  <Link className="w-4 h-4" />
+                  <span>Connection</span>
+                </h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Type:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {hoveredConnection.type}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Strength:</span>
+                    <span>{Math.round(hoveredConnection.weight * 100)}%</span>
+                  </div>
+                  {hoveredConnection.ai_confidence && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">AI Confidence:</span>
+                      <div className="flex items-center space-x-1">
+                        <Brain className="w-3 h-3 text-purple-500" />
+                        <span>{Math.round(hoveredConnection.ai_confidence * 100)}%</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Graph */}
         <div ref={svgRef} className="h-full w-full" />
@@ -590,6 +699,19 @@ Keywords: ${node.keywords.join(', ')}`;
         </select>
       </div>
 
+      {/* AI Indicators Toggle */}
+      <div className="mb-3">
+        <Button
+          variant={showAIIndicators ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowAIIndicators(!showAIIndicators)}
+          className="w-full flex items-center justify-center space-x-2"
+        >
+          <Brain className="w-4 h-4" />
+          <span className="text-sm">Toggle AI Indicators</span>
+        </Button>
+      </div>
+
       {/* Zoom Controls */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-1">
@@ -635,6 +757,7 @@ Keywords: ${node.keywords.join(', ')}`;
         <p className="japanese-text">Connections show learning relationships</p>
         <p className="japanese-text">Thicker lines = stronger connections</p>
         <p className="japanese-text">Inner circle = mastery level</p>
+        <p className="japanese-text">Purple dot = AI enhanced content</p>
       </div>
     </Card>
   );

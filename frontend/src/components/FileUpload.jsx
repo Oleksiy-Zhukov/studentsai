@@ -29,17 +29,7 @@ export const FileUpload = ({ onFileUpload }) => {
     }
   }, [])
 
-  const handleDrop = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0])
-    }
-  }, [])
-
-  const handleFileSelect = async (selectedFile) => {
+  const handleFileSelect = useCallback(async (selectedFile) => {
     setError('')
     setSuccess('')
     
@@ -134,7 +124,17 @@ export const FileUpload = ({ onFileUpload }) => {
     } finally {
       setIsUploading(false)
     }
-  }
+  }, [onFileUpload])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0])
+    }
+  }, [handleFileSelect])
 
   const handleFileInputChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -142,14 +142,14 @@ export const FileUpload = ({ onFileUpload }) => {
     }
   }
 
-  const handleTextSubmit = () => {
+  const handleTextSubmit = useCallback(() => {
     if (textContent.trim()) {
       setError('')
       setSuccess('Text content loaded!')
       onFileUpload(textContent)
       setTimeout(() => setSuccess(''), 3000)
     }
-  }
+  }, [textContent, onFileUpload])
 
   const clearFile = () => {
     setFile(null)
@@ -161,11 +161,11 @@ export const FileUpload = ({ onFileUpload }) => {
     }
   }
 
-  const clearText = () => {
+  const clearText = useCallback(() => {
     setTextContent('')
     setError('')
     setSuccess('')
-  }
+  }, [])
 
   // Simple keyboard shortcuts
   useEffect(() => {
@@ -187,7 +187,7 @@ export const FileUpload = ({ onFileUpload }) => {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [textContent, isUploading])
+  }, [textContent, isUploading, handleTextSubmit, clearText])
 
   return (
     <div className="space-y-6">

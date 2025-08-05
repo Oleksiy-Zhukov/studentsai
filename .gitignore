@@ -233,6 +233,13 @@ docker-compose.override.yml
 setup_postgres.sh
 postgres_data/
 pgadmin_data/
+Dockerfile
+.dockerignore
+docker-start.sh
+backend/Dockerfile
+frontend/Dockerfile
+backend/init.sql
+backend/download_models.py
 
 # Database files
 *.db

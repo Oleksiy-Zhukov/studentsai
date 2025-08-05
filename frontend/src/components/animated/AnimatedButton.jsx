@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/animations/variants'
 import { useReducedMotion } from '@/hooks/useAnimations'

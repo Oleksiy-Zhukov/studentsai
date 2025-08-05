@@ -10,7 +10,7 @@ export const Header = ({
   onLogout,
   onToggleSidebar,
   onToggleGraph,
-  graphVisible,
+
   onNavigateToMain
 }) => {
   const [isDark, setIsDark] = useState(false)

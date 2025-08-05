@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+
 import { Card } from '@/components/ui/card'
 import { cardVariants } from '@/animations/variants'
 import { useScrollAnimation, useHoverAnimation } from '@/hooks/useAnimations'
@@ -13,7 +13,7 @@ export const AnimatedCard = ({
   ...props 
 }) => {
   const { ref, isInView, prefersReducedMotion } = useScrollAnimation()
-  const { isHovered, hoverProps } = useHoverAnimation()
+  const { hoverProps } = useHoverAnimation()
 
   const variants = prefersReducedMotion ? {
     initial: { opacity: 1 },

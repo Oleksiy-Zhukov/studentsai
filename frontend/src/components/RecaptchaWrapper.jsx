@@ -6,7 +6,6 @@ const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ''
 export const RecaptchaWrapper = ({ action = 'submit', onVerify, onError }) => {
   const [isLoaded, setIsLoaded] = useState(false)
   const [error, setError] = useState('')
-  const [token, setToken] = useState('')
 
   useEffect(() => {
     if (!RECAPTCHA_SITE_KEY) {
@@ -35,7 +34,6 @@ export const RecaptchaWrapper = ({ action = 'submit', onVerify, onError }) => {
     if (isLoaded && window.grecaptcha && RECAPTCHA_SITE_KEY) {
       window.grecaptcha.ready(() => {
         window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action }).then((recaptchaToken) => {
-          setToken(recaptchaToken)
           if (onVerify) onVerify(recaptchaToken)
         }).catch(() => {
           const errorMsg = 'Failed to execute reCAPTCHA'
@@ -85,7 +83,7 @@ export const useRecaptcha = (action = 'submit') => {
           setToken(recaptchaToken)
           setIsVerified(true)
           resolve(recaptchaToken)
-        }).catch((err) => {
+        }).catch(() => {
           const errorMsg = "Failed to execute reCAPTCHA"
           setError(errorMsg)
           reject(new Error(errorMsg))

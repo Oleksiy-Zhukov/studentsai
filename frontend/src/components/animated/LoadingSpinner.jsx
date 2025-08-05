@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+
 import { useReducedMotion } from '@/hooks/useAnimations'
 
 export const LoadingSpinner = ({ 

@@ -18,7 +18,7 @@ from models_study import (
     LearningPath,
 )
 from auth_study import get_current_user, create_access_token
-from ai_note_service import AINoteService
+from ai_note_service import HybridAINoteService
 from schemas_study import (
     KnowledgeNodeCreate,
     KnowledgeNodeUpdate,
@@ -38,7 +38,7 @@ from schemas_study import (
 router = APIRouter(prefix="/study", tags=["Study Flow"])
 
 # Initialize AI services
-ai_note_service = AINoteService()
+ai_note_service = HybridAINoteService()
 
 
 # Token refresh endpoint
@@ -123,10 +123,14 @@ async def get_note_suggestions(
     # Generate summary
     summary = ai_note_service.generate_summary(note)
 
+    # Generate study plan
+    study_plan = ai_note_service.generate_study_plan(note)
+
     return {
         "connection_suggestions": connection_suggestions,
         "quiz_questions": quiz_questions,
         "summary": summary,
+        "study_plan": study_plan,
         "ai_analysis": note.node_metadata.get("ai_analysis", {}),
     }
 

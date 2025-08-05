@@ -73,7 +73,7 @@ export const apiCall = async (endpoint, options = {}) => {
         }
 
         return retryResponse;
-      } catch (refreshError) {
+      } catch {
         // If refresh fails, redirect to login
         window.location.href = '/study';
         throw new Error('Authentication expired. Please log in again.');
@@ -146,7 +146,7 @@ export const isTokenExpired = (token) => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const currentTime = Math.floor(Date.now() / 1000);
     return payload.exp < currentTime;
-  } catch (error) {
+  } catch {
     return true;
   }
 };
@@ -158,7 +158,7 @@ export const getTokenExpiration = (token) => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return new Date(payload.exp * 1000);
-  } catch (error) {
+  } catch {
     return null;
   }
 }; 

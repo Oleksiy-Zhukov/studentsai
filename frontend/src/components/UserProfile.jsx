@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+
 import { User, Mail, Calendar, Edit, Save, X, Camera, Settings, BookOpen, Brain } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const UserProfile = ({ onLogout, onNavigateToMain, onNavigateToStudy }) => {
-  const navigate = useNavigate()
+
   const [isEditing, setIsEditing] = useState(false)
   const [user, setUser] = useState({
     username: 'Student',

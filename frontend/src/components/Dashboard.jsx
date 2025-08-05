@@ -5,7 +5,7 @@ import { NoteEditor } from './NoteEditor';
 import { KnowledgeGraph } from './KnowledgeGraph';
 import { ProgressPanel } from './ProgressPanel';
 import { Header } from './Header';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { Maximize2, Minimize2, RefreshCw, Brain } from 'lucide-react';
 import { Button } from './ui/button';
 import { api } from '../utils/api';
 
@@ -18,6 +18,8 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [graphData, setGraphData] = useState(null);
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   // Fetch notes on component mount
   useEffect(() => {
@@ -33,6 +35,7 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
       const response = await api.getNotes();
       const data = await response.json();
       setNotes(data);
+      setLastUpdate(new Date());
     } catch (err) {
       console.error('Failed to fetch notes:', err);
       setError(err.message);
@@ -61,6 +64,13 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
         note.id === updatedNote.id ? data : note
       ));
       setSelectedNote(data);
+      
+      // If this was an AI connection update, refresh graph data
+      if (updatedNote.connections_updated) {
+        await fetchGraphData();
+      }
+      
+      setLastUpdate(new Date());
     } catch (err) {
       console.error('Failed to update note:', err);
       setError(err.message);
@@ -74,6 +84,10 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
       
       setNotes([...notes, createdNote]);
       setSelectedNote(createdNote);
+      
+      // Refresh graph data after creating a new note
+      await fetchGraphData();
+      setLastUpdate(new Date());
     } catch (err) {
       console.error('Failed to create note:', err);
       setError(err.message);
@@ -89,6 +103,15 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
 
   const toggleGraphExpanded = () => {
     setGraphExpanded(!graphExpanded);
+  };
+
+  const handleRefreshData = async () => {
+    setAiProcessing(true);
+    try {
+      await Promise.all([fetchNotes(), fetchGraphData()]);
+    } finally {
+      setAiProcessing(false);
+    }
   };
 
   if (loading) {
@@ -132,7 +155,17 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
         />
         
         <div className="flex-1 relative">
-          <div className="absolute top-4 right-4 z-10">
+          <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
+              disabled={aiProcessing}
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${aiProcessing ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -201,18 +234,37 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
             <PanelResizeHandle className="w-1 bg-border hover:bg-foreground/20 transition-colors" />
             <Panel defaultSize={20} minSize={15} maxSize={40}>
               <div className="h-full flex flex-col">
-                {/* Graph Header with Expand Button */}
+                {/* Graph Header with Controls */}
                 <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
-                  <h3 className="font-semibold japanese-text text-foreground">Knowledge Graph</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleGraphExpanded}
-                    className="p-1 h-8 w-8"
-                    title="Expand Graph"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-semibold japanese-text text-foreground">Knowledge Graph</h3>
+                    {lastUpdate && (
+                      <span className="text-xs text-muted-foreground">
+                        Updated: {lastUpdate.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRefreshData}
+                      disabled={aiProcessing}
+                      className="p-1 h-8 w-8"
+                      title="Refresh Data"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${aiProcessing ? 'animate-spin' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleGraphExpanded}
+                      className="p-1 h-8 w-8"
+                      title="Expand Graph"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Knowledge Graph */}

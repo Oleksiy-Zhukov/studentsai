@@ -1,11 +1,10 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+
 import { cn } from '@/lib/utils'
 
 const GlassmorphismCard = React.forwardRef(({
   className,
   children,
-  variant = 'default',
   hover = true,
   floating = false,
   morphing = false,
@@ -76,7 +75,6 @@ GlassmorphismCard.displayName = 'GlassmorphismCard'
 const GlassmorphismButton = React.forwardRef(({
   className,
   children,
-  variant = 'default',
   size = 'md',
   ...props
 }, ref) => {
@@ -170,7 +168,7 @@ const StaggeredContainer = React.forwardRef(({
       }}
       {...props}
     >
-      {React.Children.map(children, (child, index) => (
+      {React.Children.map(children, (child) => (
         <motion.div
           className="stagger-item"
           variants={{

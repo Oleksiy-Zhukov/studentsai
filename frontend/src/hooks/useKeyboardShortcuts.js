@@ -5,7 +5,7 @@ export const useKeyboardShortcuts = (shortcuts) => {
     const { key, metaKey, ctrlKey, shiftKey, altKey } = event
     
     // Check each shortcut
-    shortcuts.forEach(({ keys, action, description, preventDefault = true }) => {
+    shortcuts.forEach(({ keys, action, preventDefault = true }) => {
       const keyMatch = keys.some(keyCombo => {
         const parts = keyCombo.split('+')
         let modifier, targetKey

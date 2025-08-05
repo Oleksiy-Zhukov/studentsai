@@ -5,7 +5,7 @@ import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Brain, Link, Target, Sparkles, Zap } from 'lucide-react';
+import { Brain, Link, Target, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '../utils/api';
 
 export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
@@ -19,6 +19,13 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
   const [aiSuggestions, setAiSuggestions] = useState(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    summary: true,
+    connections: true,
+    quiz: true,
+    study_plan: true,
+    analysis: false
+  });
 
   // Update local state when note prop changes
   useEffect(() => {
@@ -116,11 +123,32 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
       if (onNoteUpdate) {
         onNoteUpdate({ ...note, connections_updated: true });
       }
+      // Refresh AI suggestions to show updated connections
+      await getAISuggestions();
     } catch (error) {
       console.error('Failed to create AI connections:', error);
     } finally {
       setIsLoadingAI(false);
     }
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const getConfidenceColor = (confidence) => {
+    if (confidence >= 0.8) return 'text-green-600';
+    if (confidence >= 0.6) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getConfidenceIcon = (confidence) => {
+    if (confidence >= 0.8) return <CheckCircle className="w-4 h-4 text-green-600" />;
+    if (confidence >= 0.6) return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+    return <AlertCircle className="w-4 h-4 text-red-600" />;
   };
 
   const renderMarkdownPreview = (text) => {
@@ -376,70 +404,220 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
         )}
       </div>
 
-      {/* AI Suggestions Panel */}
+      {/* Enhanced AI Suggestions Panel */}
       {showAIPanel && aiSuggestions && (
-        <div className="border-t border-border p-4 bg-muted/30">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center space-x-2">
-              <Sparkles className="w-5 h-5" />
-              <span>AI Analysis & Suggestions</span>
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAIPanel(false)}
-            >
-              Close
-            </Button>
+        <div className="border-t border-border bg-muted/30">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold flex items-center space-x-2">
+                <Sparkles className="w-5 h-5" />
+                <span>AI Analysis & Suggestions</span>
+              </h3>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={createAIConnections}
+                  disabled={isLoadingAI}
+                  className="flex items-center space-x-2"
+                >
+                  <Link className="w-4 h-4" />
+                  {isLoadingAI ? 'Creating...' : 'Create Connections'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAIPanel(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Summary */}
-            <Card className="p-4">
-              <h4 className="font-medium mb-2 flex items-center space-x-2">
-                <Target className="w-4 h-4" />
-                <span>Summary</span>
-              </h4>
-              <div className="text-sm text-muted-foreground">
-                {aiSuggestions.summary}
+          <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+            {/* Summary Section */}
+            <Card className="border-2">
+              <div 
+                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => toggleSection('summary')}
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center space-x-2">
+                    <Target className="w-4 h-4" />
+                    <span>AI Summary</span>
+                  </h4>
+                  {expandedSections.summary ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
               </div>
+              {expandedSections.summary && (
+                <div className="px-4 pb-4">
+                  <div className="text-sm text-muted-foreground whitespace-pre-line">
+                    {aiSuggestions.summary}
+                  </div>
+                </div>
+              )}
             </Card>
 
-            {/* Connection Suggestions */}
-            <Card className="p-4">
-              <h4 className="font-medium mb-2 flex items-center space-x-2">
-                <Link className="w-4 h-4" />
-                <span>Suggested Connections ({aiSuggestions.connection_suggestions?.length || 0})</span>
-              </h4>
-              <div className="space-y-2">
-                {aiSuggestions.connection_suggestions?.slice(0, 3).map((suggestion, index) => (
-                  <div key={index} className="text-sm p-2 bg-background rounded border">
-                    <div className="font-medium">{suggestion.relationship_type}</div>
-                    <div className="text-muted-foreground text-xs">
-                      Confidence: {Math.round(suggestion.ai_confidence * 100)}%
-                    </div>
-                    <div className="text-xs">{suggestion.reason}</div>
-                  </div>
-                ))}
+            {/* Connection Suggestions Section */}
+            <Card className="border-2">
+              <div 
+                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => toggleSection('connections')}
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center space-x-2">
+                    <Link className="w-4 h-4" />
+                    <span>Suggested Connections ({aiSuggestions.connection_suggestions?.length || 0})</span>
+                  </h4>
+                  {expandedSections.connections ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
               </div>
+              {expandedSections.connections && (
+                <div className="px-4 pb-4 space-y-3">
+                  {aiSuggestions.connection_suggestions?.length > 0 ? (
+                    aiSuggestions.connection_suggestions.map((suggestion, index) => (
+                      <div key={index} className="p-3 bg-background rounded-lg border border-border">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline" className="text-xs">
+                            {suggestion.relationship_type}
+                          </Badge>
+                          <div className="flex items-center space-x-1">
+                            {getConfidenceIcon(suggestion.ai_confidence)}
+                            <span className={`text-xs font-medium ${getConfidenceColor(suggestion.ai_confidence)}`}>
+                              {Math.round(suggestion.ai_confidence * 100)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium mb-1">
+                          {suggestion.target_node_id}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {suggestion.reason}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No connection suggestions available.</p>
+                  )}
+                </div>
+              )}
             </Card>
 
-            {/* Quiz Questions */}
-            <Card className="p-4">
-              <h4 className="font-medium mb-2 flex items-center space-x-2">
-                <Zap className="w-4 h-4" />
-                <span>Quiz Questions ({aiSuggestions.quiz_questions?.length || 0})</span>
-              </h4>
-              <div className="space-y-2">
-                {aiSuggestions.quiz_questions?.slice(0, 2).map((question, index) => (
-                  <div key={index} className="text-sm p-2 bg-background rounded border">
-                    <div className="font-medium">{question.question}</div>
-                    <div className="text-muted-foreground text-xs mt-1">
-                      {question.answer.substring(0, 100)}...
+            {/* Quiz Questions Section */}
+            <Card className="border-2">
+              <div 
+                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => toggleSection('quiz')}
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center space-x-2">
+                    <Zap className="w-4 h-4" />
+                    <span>Quiz Questions ({aiSuggestions.quiz_questions?.length || 0})</span>
+                  </h4>
+                  {expandedSections.quiz ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </div>
+              {expandedSections.quiz && (
+                <div className="px-4 pb-4 space-y-3">
+                  {aiSuggestions.quiz_questions?.length > 0 ? (
+                    aiSuggestions.quiz_questions.map((question, index) => (
+                      <div key={index} className="p-3 bg-background rounded-lg border border-border">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline" className="text-xs">
+                            {question.type || 'definition'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            Concept: {question.concept}
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium mb-2">
+                          {question.question}
+                        </div>
+                        <details className="text-xs">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                            Show answer
+                          </summary>
+                          <div className="mt-2 p-2 bg-muted/50 rounded text-muted-foreground">
+                            {question.answer}
+                          </div>
+                        </details>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No quiz questions available.</p>
+                  )}
+                </div>
+              )}
+            </Card>
+
+            {/* Study Plan Section */}
+            <Card className="border-2">
+              <div 
+                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => toggleSection('study_plan')}
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center space-x-2">
+                    <Target className="w-4 h-4" />
+                    <span>Study Plan</span>
+                  </h4>
+                  {expandedSections.study_plan ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </div>
+              {expandedSections.study_plan && aiSuggestions.study_plan && (
+                <div className="px-4 pb-4">
+                  <div className="text-sm text-muted-foreground whitespace-pre-line">
+                    {aiSuggestions.study_plan}
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* AI Analysis Section */}
+            <Card className="border-2">
+              <div 
+                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => toggleSection('analysis')}
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center space-x-2">
+                    <Brain className="w-4 h-4" />
+                    <span>Content Analysis</span>
+                  </h4>
+                  {expandedSections.analysis ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </div>
+              {expandedSections.analysis && aiSuggestions.ai_analysis && (
+                <div className="px-4 pb-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Keywords:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {aiSuggestions.ai_analysis.keywords?.map((keyword, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {keyword}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">Complexity Score:</span>
+                      <div className="mt-1">
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${(aiSuggestions.ai_analysis.complexity_score || 0) * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round((aiSuggestions.ai_analysis.complexity_score || 0) * 100)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </Card>
           </div>
         </div>
