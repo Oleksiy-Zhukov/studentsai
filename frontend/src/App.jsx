@@ -1,30 +1,27 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { MainApp } from './components/MainApp'
+import { LandingPage } from './components/LandingPage'
 import { StudyFlow } from './components/StudyFlow'
-import { UserProfileWrapper } from './components/UserProfileWrapper'
-import { RecaptchaProvider } from './components/RecaptchaProvider'
-import { RecaptchaWrapper } from './components/RecaptchaWrapper'
+import { UserProfile } from './components/UserProfile'
+import { Auth } from './components/Auth'
 import { Toaster } from '@/components/ui/sonner'
 import './App.css'
 
 function App() {
   return (
-    <RecaptchaProvider>
-      <Router>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/" element={<Navigate to="/study" replace />} />
-            <Route path="/study" element={<StudyFlow />} />
-            <Route path="/main" element={<MainApp />} />
-            <Route path="/profile" element={<UserProfileWrapper />} />
-            <Route path="*" element={<Navigate to="/study" replace />} />
-          </Routes>
-        </div>
-        <Toaster />
-        <RecaptchaWrapper />
-      </Router>
-    </RecaptchaProvider>
+    <Router>
+      <div className="min-h-screen bg-background">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/study" element={<StudyFlow />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+      <Toaster />
+    </Router>
   )
 }
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, EyeOff, Mail, Lock, User, Brain } from 'lucide-react'
 
-export const Auth = ({ onAuthSuccess }) => {
+export const Auth = () => {
+  const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -34,6 +37,7 @@ export const Auth = ({ onAuthSuccess }) => {
         },
         body: JSON.stringify({
           email,
+          username,
           password,
         }),
       })
@@ -50,11 +54,11 @@ export const Auth = ({ onAuthSuccess }) => {
       localStorage.setItem('authToken', data.access_token)
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Call the success callback
-      if (onAuthSuccess) {
-        onAuthSuccess(data)
-      }
+      console.log('✅ Authentication successful, navigating to /study')
+      // Navigate to study page
+      navigate('/study')
     } catch (err) {
+      console.error('❌ Authentication error:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -221,6 +225,22 @@ export const Auth = ({ onAuthSuccess }) => {
                         placeholder="Enter your email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10 japanese-textarea"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="register-username" className="japanese-text">Username</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="register-username"
+                        type="text"
+                        placeholder="Choose a username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         className="pl-10 japanese-textarea"
                         required
                       />

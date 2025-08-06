@@ -94,62 +94,62 @@ export const apiCall = async (endpoint, options = {}) => {
 // Specific API functions
 export const api = {
   // Notes
-  getNotes: () => apiCall('/api/v1/study/notes'),
-  createNote: (noteData) => apiCall('/api/v1/study/notes', {
+  getNotes: () => apiCall('/api/v1/study/study/notes'),
+  createNote: (noteData) => apiCall('/api/v1/study/study/notes', {
     method: 'POST',
     body: JSON.stringify(noteData),
   }),
-  updateNote: (noteId, noteData) => apiCall(`/api/v1/study/notes/${noteId}`, {
+  updateNote: (noteId, noteData) => apiCall(`/api/v1/study/study/notes/${noteId}`, {
     method: 'PUT',
     body: JSON.stringify(noteData),
   }),
-  deleteNote: (noteId) => apiCall(`/api/v1/study/notes/${noteId}`, {
+  deleteNote: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}`, {
     method: 'DELETE',
   }),
 
   // AI-Powered Features
-  getNoteSuggestions: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/suggestions`, {
+  getNoteSuggestions: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}/suggestions`, {
     method: 'POST',
   }),
-  createAIConnections: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/connections`, {
+  createAIConnections: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}/connections`, {
     method: 'POST',
   }),
   
   // Individual AI Content Generation
-  generateSummary: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/summary`, {
+  generateSummary: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}/summary`, {
     method: 'POST',
   }),
-  generateQuiz: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/quiz`, {
+  generateQuiz: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}/quiz`, {
     method: 'POST',
   }),
-  generateStudyPlan: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/study-plan`, {
+  generateStudyPlan: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}/study-plan`, {
     method: 'POST',
   }),
-  regenerateAnalysis: (noteId) => apiCall(`/api/v1/study/notes/${noteId}/analysis`, {
+  regenerateAnalysis: (noteId) => apiCall(`/api/v1/study/study/notes/${noteId}/analysis`, {
     method: 'POST',
   }),
 
   // Graph
-  getGraph: () => apiCall('/api/v1/study/graph'),
+  getGraph: () => apiCall('/api/v1/study/study/graph'),
 
   // Connections
-  createConnection: (connectionData) => apiCall('/api/v1/study/connections', {
+  createConnection: (connectionData) => apiCall('/api/v1/study/study/connections', {
     method: 'POST',
     body: JSON.stringify(connectionData),
   }),
 
   // Study Sessions
-  createSession: (sessionData) => apiCall('/api/v1/study/sessions', {
+  createSession: (sessionData) => apiCall('/api/v1/study/study/sessions', {
     method: 'POST',
     body: JSON.stringify(sessionData),
   }),
-  getSessions: () => apiCall('/api/v1/study/sessions'),
+  getSessions: () => apiCall('/api/v1/study/study/sessions'),
 
   // Progress
-  getProgress: () => apiCall('/api/v1/study/progress'),
+  getProgress: () => apiCall('/api/v1/study/study/progress'),
 
   // Recommendations
-  getRecommendations: () => apiCall('/api/v1/study/recommendations'),
+  getRecommendations: () => apiCall('/api/v1/study/study/recommendations'),
 };
 
 // Check if token is expired (without making API call)

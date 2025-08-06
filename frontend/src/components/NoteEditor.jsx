@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Brain, Link, Target, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import { 
+  ChevronDown, ChevronUp, Bold, Italic, Code, List, ListOrdered, Quote,
+  Heading1, Heading2, Heading3, Minus, Plus, Save, Edit3, Eye, EyeOff,
+  Brain, Link, Target, Sparkles, Zap, X, Maximize2, Minimize2
+} from 'lucide-react';
 import { api } from '../utils/api';
+
 
 export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
   const [title, setTitle] = useState('');
@@ -14,80 +19,92 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
   const [difficulty, setDifficulty] = useState('beginner');
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState(null);
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [showAIPanel, setShowAIPanel] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    summary: true,
-    connections: true,
-    quiz: true,
-    study_plan: true,
-    analysis: false
-  });
-  
-  // Individual loading states for each AI feature
-  const [loadingStates, setLoadingStates] = useState({
-    summary: false,
-    quiz: false,
-    studyPlan: false,
-    connections: false,
-    analysis: false
-  });
+  const [showAIFeatures, setShowAIFeatures] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Update local state when note prop changes
+  const [selectedText, setSelectedText] = useState('');
+  const [aiSuggestions, setAiSuggestions] = useState({});
+  const [loadingStates, setLoadingStates] = useState({});
+  const [aiPanelHeight, setAiPanelHeight] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
+  const textareaRef = useRef(null);
+
+  // Load note data when component mounts or note changes
   useEffect(() => {
     if (note) {
       setTitle(note.title || '');
       setContent(note.content || '');
-      setDifficulty(note.difficulty_level || 'beginner');
+      setDifficulty(note.difficulty || 'beginner');
       setTags(note.tags || []);
-      setIsEditing(false);
+      setAiSuggestions(note.ai_suggestions || {});
+      setHasUnsavedChanges(false);
     } else {
       // Reset form for new note
       setTitle('');
       setContent('');
       setDifficulty('beginner');
       setTags([]);
-      setIsEditing(true);
+      setAiSuggestions({});
+      setHasUnsavedChanges(false);
     }
   }, [note]);
 
-  const handleSave = () => {
-    if (!title.trim()) return;
+  // Track changes for autosave detection
+  useEffect(() => {
+    if (!note) return;
+    
+    const currentData = {
+      title: note.title || '',
+      content: note.content || '',
+      difficulty: note.difficulty || 'beginner',
+      tags: note.tags || []
+    };
+    
+    const newData = {
+      title,
+      content,
+      difficulty,
+      tags
+    };
+    
+    const hasChanges = JSON.stringify(currentData) !== JSON.stringify(newData);
+    setHasUnsavedChanges(hasChanges);
+  }, [title, content, difficulty, tags, note]);
 
-    const updatedNote = {
-      ...note,
-      title: title.trim(),
-      content: content.trim(),
-      difficulty_level: difficulty,
-      tags: tags
+  const handleSave = async () => {
+    const noteData = {
+      title,
+      content,
+      difficulty,
+      tags,
+      ai_suggestions: aiSuggestions
     };
 
-    if (note?.id) {
-      onNoteUpdate(updatedNote);
-    } else {
-      onNoteCreate(updatedNote);
+    console.log('Note object:', note); // Debug log
+    console.log('Note ID:', note?.id); // Debug log
+
+    try {
+      if (note?.id) {
+        // Update existing note
+        const updatedNote = { ...note, ...noteData };
+        console.log('Updating note with ID:', note.id); // Debug log
+        await api.updateNote(note.id, noteData);
+        onNoteUpdate(updatedNote);
+      } else {
+        // Create new note
+        console.log('Creating new note'); // Debug log
+        const response = await api.createNote(noteData);
+        onNoteCreate(response);
+      }
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Error saving note:', error);
+      // You might want to show a toast notification here
     }
-    
-    setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    if (note) {
-      setTitle(note.title || '');
-      setContent(note.content || '');
-      setDifficulty(note.difficulty_level || 'beginner');
-      setTags(note.tags || []);
-      setIsEditing(false);
-    } else {
-      setTitle('');
-      setContent('');
-      setDifficulty('beginner');
-      setTags([]);
-    }
-  };
+
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -101,60 +118,86 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      handleSave();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
     }
   };
 
-  const getAISuggestions = async () => {
-    if (!note?.id) return;
+  const formatText = (format) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    let formattedText = '';
+
+    switch (format) {
+      case 'bold':
+        formattedText = `**${selectedText}**`;
+        break;
+      case 'italic':
+        formattedText = `*${selectedText}*`;
+        break;
+      case 'code':
+        formattedText = `\`${selectedText}\``;
+        break;
+      case 'heading1':
+        formattedText = `# ${selectedText}`;
+        break;
+      case 'heading2':
+        formattedText = `## ${selectedText}`;
+        break;
+      case 'heading3':
+        formattedText = `### ${selectedText}`;
+        break;
+      case 'list':
+        formattedText = `- ${selectedText}`;
+        break;
+      case 'orderedList':
+        formattedText = `1. ${selectedText}`;
+        break;
+      case 'quote':
+        formattedText = `> ${selectedText}`;
+        break;
+      default:
+        formattedText = selectedText;
+    }
+
+    const newContent = content.substring(0, start) + formattedText + content.substring(end);
+    setContent(newContent);
     
-    setIsLoadingAI(true);
-    try {
-      const suggestions = await api.getNoteSuggestions(note.id);
-      setAiSuggestions(suggestions);
-      setShowAIPanel(true);
-    } catch (error) {
-      console.error('Failed to get AI suggestions:', error);
-    } finally {
-      setIsLoadingAI(false);
-    }
+    // Reset selection
+    setTimeout(() => {
+      textarea.setSelectionRange(start, start + formattedText.length);
+      textarea.focus();
+    }, 0);
   };
 
-  const createAIConnections = async () => {
-    if (!note?.id) return;
+  const handleTextSelection = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
     
-    setIsLoadingAI(true);
-    try {
-      const result = await api.createAIConnections(note.id);
-      console.log('AI connections created:', result);
-      // Refresh the note to get updated data
-      if (onNoteUpdate) {
-        onNoteUpdate({ ...note, connections_updated: true });
-      }
-      // Refresh AI suggestions to show updated connections
-      await getAISuggestions();
-    } catch (error) {
-      console.error('Failed to create AI connections:', error);
-    } finally {
-      setIsLoadingAI(false);
+    if (start !== end) {
+      setSelectedText(content.substring(start, end));
     }
   };
 
-  // Individual content generation functions
+
+
   const generateSummary = async () => {
     if (!note?.id) return;
     
     setLoadingStates(prev => ({ ...prev, summary: true }));
     try {
-      const result = await api.generateSummary(note.id);
-      console.log('✅ Summary generated:', result.summary);
-      setAiSuggestions(prev => ({
-        ...prev,
-        summary: result.summary
-      }));
+      const response = await api.generateSummary(note.id);
+      setAiSuggestions(prev => ({ ...prev, summary: response }));
     } catch (error) {
-      console.error('Failed to generate summary:', error);
+      console.error('Error generating summary:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, summary: false }));
     }
@@ -165,13 +208,10 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
     
     setLoadingStates(prev => ({ ...prev, quiz: true }));
     try {
-      const result = await api.generateQuiz(note.id);
-      setAiSuggestions(prev => ({
-        ...prev,
-        quiz_questions: result.quiz_questions
-      }));
+      const response = await api.generateQuiz(note.id);
+      setAiSuggestions(prev => ({ ...prev, quiz: response }));
     } catch (error) {
-      console.error('Failed to generate quiz:', error);
+      console.error('Error generating quiz:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, quiz: false }));
     }
@@ -182,15 +222,26 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
     
     setLoadingStates(prev => ({ ...prev, studyPlan: true }));
     try {
-      const result = await api.generateStudyPlan(note.id);
-      setAiSuggestions(prev => ({
-        ...prev,
-        study_plan: result.study_plan
-      }));
+      const response = await api.generateStudyPlan(note.id);
+      setAiSuggestions(prev => ({ ...prev, study_plan: response }));
     } catch (error) {
-      console.error('Failed to generate study plan:', error);
+      console.error('Error generating study plan:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, studyPlan: false }));
+    }
+  };
+
+  const createAIConnections = async () => {
+    if (!note?.id) return;
+    
+    setLoadingStates(prev => ({ ...prev, connections: true }));
+    try {
+      const response = await api.createAIConnections(note.id);
+      setAiSuggestions(prev => ({ ...prev, connections: response }));
+    } catch (error) {
+      console.error('Error creating AI connections:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, connections: false }));
     }
   };
 
@@ -199,584 +250,433 @@ export const NoteEditor = ({ note, onNoteUpdate, onNoteCreate }) => {
     
     setLoadingStates(prev => ({ ...prev, analysis: true }));
     try {
-      const result = await api.regenerateAnalysis(note.id);
-      setAiSuggestions(result);
-      setShowAIPanel(true);
+      const response = await api.regenerateAnalysis(note.id);
+      setAiSuggestions(prev => ({ ...prev, analysis: response }));
     } catch (error) {
-      console.error('Failed to regenerate analysis:', error);
+      console.error('Error regenerating analysis:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, analysis: false }));
     }
   };
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  // Improved resize handlers for smoother animation
+  const handleMouseDown = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
   };
 
-  const getConfidenceColor = (confidence) => {
-    if (confidence >= 0.8) return 'text-green-600';
-    if (confidence >= 0.6) return 'text-yellow-600';
-    return 'text-red-600';
+  const handleMouseMove = (e) => {
+    if (!isResizing) return;
+    
+    const newHeight = window.innerHeight - e.clientY - 50;
+    if (newHeight > 100 && newHeight < window.innerHeight - 200) {
+      setAiPanelHeight(newHeight);
+    }
   };
 
-  const getConfidenceIcon = (confidence) => {
-    if (confidence >= 0.8) return <CheckCircle className="w-4 h-4 text-green-600" />;
-    if (confidence >= 0.6) return <AlertCircle className="w-4 h-4 text-yellow-600" />;
-    return <AlertCircle className="w-4 h-4 text-red-600" />;
+  const handleMouseUp = () => {
+    setIsResizing(false);
   };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isResizing]);
 
   const renderMarkdownPreview = (text) => {
-    // Simple markdown rendering (basic implementation)
+    // Simple markdown rendering - you might want to use a proper markdown library
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted px-1 rounded">$1</code>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+      .replace(/^- (.*$)/gm, '<li>$1</li>')
+      .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
       .replace(/\n/g, '<br>');
   };
 
-  if (!note && !isEditing) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-foreground mb-4">
-            Welcome to Smart Study Flow
-          </h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            Create your first note to start building your knowledge base. 
-            Connect ideas, track your progress, and let AI guide your learning.
-          </p>
-          <Button onClick={() => setIsEditing(true)} className="japanese-button">
-            Create Your First Note
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b border-border p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
+    <div className="h-screen flex flex-col bg-background">
+      {/* VS Code-style Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border bg-card">
+        <h1 className="text-lg font-semibold text-foreground">
+          {note?.id ? 'Edit Note' : 'Create New Note'}
+        </h1>
+        <div className="flex items-center space-x-2">
+          {note?.id && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => setShowPreview(!showPreview)}
+              onClick={() => setShowAIFeatures(!showAIFeatures)}
+              className="flex items-center space-x-2"
             >
-              {showPreview ? 'Edit' : 'Preview'}
+              <div className="w-4 h-4 bg-gray-400 rounded"></div>
+              <span>AI Features</span>
             </Button>
-            {note?.id && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={getAISuggestions}
-                  disabled={isLoadingAI}
-                  className="flex items-center space-x-2"
-                >
-                  <Brain className="w-4 h-4" />
-                  {isLoadingAI ? 'Analyzing...' : 'AI Analysis'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={createAIConnections}
-                  disabled={isLoadingAI}
-                  className="flex items-center space-x-2"
-                >
-                  <Link className="w-4 h-4" />
-                  {isLoadingAI ? 'Creating...' : 'Auto-Connect'}
-                </Button>
-              </>
-            )}
-            {note?.id && (
-              <span className="text-sm text-muted-foreground">
-                Last updated: {new Date(note.updated_at).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-          
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview(!showPreview)}
+            className="flex items-center space-x-2"
+          >
+            {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <span>{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+          </Button>
           <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={handleSave}
-                  disabled={!title.trim()}
-                  className="japanese-button"
-                >
-                  Save
-                </Button>
-              </>
-            ) : (
-              <Button 
-                size="sm" 
-                onClick={() => setIsEditing(true)}
-                className="japanese-button"
-              >
-                Edit
-              </Button>
+            {hasUnsavedChanges && (
+              <span className="text-xs text-orange-600 font-medium">Unsaved changes</span>
             )}
+            <Button 
+              size="sm" 
+              onClick={handleSave} 
+              className="flex items-center space-x-2"
+              disabled={!hasUnsavedChanges}
+            >
+              <Save className="w-4 h-4" />
+              <span>Save</span>
+            </Button>
           </div>
         </div>
-
-        {isEditing ? (
-          <Input
-            placeholder="Note title..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="text-xl font-semibold mb-4"
-            onKeyPress={handleKeyPress}
-          />
-        ) : (
-          <h1 className="text-xl font-semibold text-foreground mb-4">
-            {title || 'Untitled Note'}
-          </h1>
-        )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {showPreview ? (
-          <div className="flex-1 p-6 overflow-y-auto">
-            <div 
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ 
-                __html: renderMarkdownPreview(content || 'No content yet...') 
-              }}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Note Editor Section */}
+        <div className="flex-1 p-6 overflow-y-auto" style={{ height: showAIFeatures ? `calc(100vh - ${aiPanelHeight + 100}px)` : 'calc(100vh - 80px)' }}>
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Title */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Title</label>
+                          <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter note title..."
+              className="text-lg"
             />
-          </div>
-        ) : (
-          <div className="flex-1 p-6">
-            {isEditing ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Content
-                  </label>
-                  <Textarea
-                    placeholder="Write your notes here... (Markdown supported)"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[400px] japanese-textarea"
-                    onKeyPress={handleKeyPress}
+            </div>
+
+            {/* Content */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-foreground">Content</label>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('bold')}
+                    disabled={!selectedText}
+                    className="p-1"
+                  >
+                    <Bold className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('italic')}
+                    disabled={!selectedText}
+                    className="p-1"
+                  >
+                    <Italic className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('code')}
+                    disabled={!selectedText}
+                    className="p-1"
+                  >
+                    <Code className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('heading1')}
+                    disabled={!selectedText}
+                    className="p-1"
+                  >
+                    <Heading1 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('list')}
+                    disabled={!selectedText}
+                    className="p-1"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              {showPreview ? (
+                <div className="border rounded-md p-4 min-h-[400px] bg-background">
+                  <div 
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdownPreview(content) }}
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Use **bold**, *italic*, `code`, and line breaks for formatting
-                  </p>
                 </div>
+              ) : (
+                              <Textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onSelect={handleTextSelection}
+                placeholder="Write your note content here... (Supports Markdown)"
+                className="min-h-[400px] resize-none"
+              />
+              )}
+            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Difficulty Level
-                    </label>
-                    <Select value={difficulty} onValueChange={setDifficulty}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="beginner">Beginner</SelectItem>
-                        <SelectItem value="intermediate">Intermediate</SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Tags
-                    </label>
-                    <div className="flex space-x-2">
-                      <Input
-                        placeholder="Add tag..."
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                        className="flex-1"
-                      />
-                      <Button size="sm" onClick={addTag} disabled={!newTag.trim()}>
-                        Add
-                      </Button>
-                    </div>
-                    {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {tags.map((tag) => (
-                          <Badge 
-                            key={tag} 
-                            variant="secondary"
-                            className="cursor-pointer"
-                            onClick={() => removeTag(tag)}
-                          >
-                            {tag} ×
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* Difficulty and Tags */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Difficulty Level</label>
+                <Select value={difficulty} onValueChange={setDifficulty}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">Beginner</SelectItem>
+                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                    <SelectItem value="advanced">Advanced</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Content
-                  </label>
-                  <div className="min-h-[400px] p-4 border rounded-md bg-muted/50">
-                    {content ? (
-                      <div 
-                        className="prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ 
-                          __html: renderMarkdownPreview(content) 
-                        }}
-                      />
-                    ) : (
-                      <p className="text-muted-foreground">No content yet...</p>
-                    )}
-                  </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Tags</label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Add tag..."
+                  />
+                  <Button onClick={addTag} size="sm">
+                    <Plus className="w-4 h-4" />
+                  </Button>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Difficulty Level
-                    </label>
-                    <Badge 
-                      variant={
-                        difficulty === 'beginner' ? 'default' :
-                        difficulty === 'intermediate' ? 'secondary' : 'destructive'
-                      }
-                    >
-                      {difficulty}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Tags
-                    </label>
-                    {tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No tags</p>
-                    )}
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                                      {tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center space-x-1">
+                        <span>{tag}</span>
+                        <button
+                          onClick={() => removeTag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Enhanced AI Suggestions Panel */}
-      {showAIPanel && aiSuggestions && (
-        <div className="border-t border-border bg-muted/30">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold flex items-center space-x-2">
-                <Sparkles className="w-5 h-5" />
-                <span>AI Analysis & Suggestions</span>
-              </h3>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={createAIConnections}
-                  disabled={isLoadingAI}
-                  className="flex items-center space-x-2"
-                >
-                  <Link className="w-4 h-4" />
-                  {isLoadingAI ? 'Creating...' : 'Create Connections'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAIPanel(false)}
-                >
-                  Close
-                </Button>
               </div>
             </div>
           </div>
-
-          <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
-            {/* Summary Section */}
-            <Card className="border-2">
-              <div 
-                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => toggleSection('summary')}
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium flex items-center space-x-2">
-                    <Target className="w-4 h-4" />
-                    <span>AI Summary</span>
-                  </h4>
-                  {expandedSections.summary ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </div>
-              </div>
-              {expandedSections.summary && (
-                <div className="px-4 pb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium">Content Summary</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={generateSummary}
-                      disabled={loadingStates.summary}
-                      className="h-7 px-2 text-xs"
-                    >
-                      {loadingStates.summary ? 'Generating...' : 'Generate New'}
-                    </Button>
-                  </div>
-                  {aiSuggestions?.summary ? (
-                    <div className="text-sm text-muted-foreground whitespace-pre-line bg-background/50 p-3 rounded border">
-                      {aiSuggestions.summary}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded">
-                      No summary generated yet. Click "Generate New" to create one.
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-
-            {/* Connection Suggestions Section */}
-            <Card className="border-2">
-              <div 
-                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => toggleSection('connections')}
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium flex items-center space-x-2">
-                    <Link className="w-4 h-4" />
-                    <span>Suggested Connections ({aiSuggestions.connection_suggestions?.length || 0})</span>
-                  </h4>
-                  {expandedSections.connections ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </div>
-              </div>
-              {expandedSections.connections && (
-                <div className="px-4 pb-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Suggested Connections</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={createAIConnections}
-                      disabled={isLoadingAI || !aiSuggestions.connection_suggestions?.length}
-                      className="h-7 px-2 text-xs"
-                    >
-                      {isLoadingAI ? 'Creating...' : 'Create All'}
-                    </Button>
-                  </div>
-                  {aiSuggestions.connection_suggestions?.length > 0 ? (
-                    aiSuggestions.connection_suggestions.map((suggestion, index) => (
-                      <div key={index} className="p-3 bg-background rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {suggestion.relationship_type}
-                          </Badge>
-                          <div className="flex items-center space-x-1">
-                            {getConfidenceIcon(suggestion.ai_confidence)}
-                            <span className={`text-xs font-medium ${getConfidenceColor(suggestion.ai_confidence)}`}>
-                              {Math.round(suggestion.ai_confidence * 100)}%
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-sm font-medium mb-1">
-                          {suggestion.target_node_id}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {suggestion.reason}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No connection suggestions available.</p>
-                  )}
-                </div>
-              )}
-            </Card>
-
-            {/* Quiz Questions Section */}
-            <Card className="border-2">
-              <div 
-                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => toggleSection('quiz')}
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium flex items-center space-x-2">
-                    <Zap className="w-4 h-4" />
-                    <span>Quiz Questions ({aiSuggestions.quiz_questions?.length || 0})</span>
-                  </h4>
-                  {expandedSections.quiz ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </div>
-              </div>
-              {expandedSections.quiz && (
-                <div className="px-4 pb-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Practice Questions</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={generateQuiz}
-                      disabled={loadingStates.quiz}
-                      className="h-7 px-2 text-xs"
-                    >
-                      {loadingStates.quiz ? 'Generating...' : 'Generate New'}
-                    </Button>
-                  </div>
-                  {aiSuggestions.quiz_questions?.length > 0 ? (
-                    aiSuggestions.quiz_questions.map((question, index) => (
-                      <div key={index} className="p-3 bg-background rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {question.type || 'definition'}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Concept: {question.concept}
-                          </span>
-                        </div>
-                        <div className="text-sm font-medium mb-2">
-                          {question.question}
-                        </div>
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                            Show answer
-                          </summary>
-                          <div className="mt-2 p-2 bg-muted/50 rounded text-muted-foreground">
-                            {question.answer}
-                          </div>
-                        </details>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No quiz questions available.</p>
-                  )}
-                </div>
-              )}
-            </Card>
-
-            {/* Study Plan Section */}
-            <Card className="border-2">
-              <div 
-                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => toggleSection('study_plan')}
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium flex items-center space-x-2">
-                    <Target className="w-4 h-4" />
-                    <span>Study Plan</span>
-                  </h4>
-                  {expandedSections.study_plan ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </div>
-              </div>
-              {expandedSections.study_plan && (
-                <div className="px-4 pb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium">Personalized Study Plan</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={generateStudyPlan}
-                      disabled={loadingStates.studyPlan}
-                      className="h-7 px-2 text-xs"
-                    >
-                      {loadingStates.studyPlan ? 'Generating...' : 'Generate New'}
-                    </Button>
-                  </div>
-                  {aiSuggestions.study_plan ? (
-                    <div className="text-sm text-muted-foreground whitespace-pre-line bg-background/50 p-3 rounded border">
-                      {aiSuggestions.study_plan}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded">
-                      No study plan generated yet. Click "Generate New" to create one.
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-
-            {/* AI Analysis Section */}
-            <Card className="border-2">
-              <div 
-                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => toggleSection('analysis')}
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium flex items-center space-x-2">
-                    <Brain className="w-4 h-4" />
-                    <span>Content Analysis</span>
-                  </h4>
-                  {expandedSections.analysis ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </div>
-              </div>
-              {expandedSections.analysis && (
-                <div className="px-4 pb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium">Content Analysis</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={regenerateAnalysis}
-                      disabled={loadingStates.analysis}
-                      className="h-7 px-2 text-xs"
-                    >
-                      {loadingStates.analysis ? 'Analyzing...' : 'Regenerate All'}
-                    </Button>
-                  </div>
-                  {aiSuggestions.ai_analysis ? (
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Keywords:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {aiSuggestions.ai_analysis.keywords?.map((keyword, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {keyword}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium">Complexity Score:</span>
-                      <div className="mt-1">
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${(aiSuggestions.ai_analysis.complexity_score || 0) * 100}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round((aiSuggestions.ai_analysis.complexity_score || 0) * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded">
-                      No analysis available. Click "Regenerate All" to analyze this note.
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          </div>
         </div>
-      )}
+
+        {/* AI Features Panel (VS Code Terminal Style) */}
+        {showAIFeatures && note?.id && (
+          <>
+            {/* Resize Handle */}
+            <div 
+              className="h-1 bg-border cursor-ns-resize hover:bg-primary/20 transition-colors"
+              onMouseDown={handleMouseDown}
+            />
+            
+            {/* AI Panel */}
+            <div 
+              className="bg-card border-t border-border overflow-hidden"
+              style={{ height: `${aiPanelHeight}px` }}
+            >
+              {/* Panel Header */}
+              <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-gray-400 rounded"></div>
+                  <span className="text-sm font-medium text-foreground">AI Features</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAIFeatures(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Panel Content */}
+              <div className="p-4 overflow-y-auto h-full">
+                <div className="space-y-4">
+                  {/* AI Feature Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <Card 
+                      className="p-3 hover:shadow-md transition-all cursor-pointer border-2 hover:border-blue-300"
+                      onClick={generateSummary}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm">AI Summary</h3>
+                          <p className="text-xs text-muted-foreground">Generate concise summary</p>
+                        </div>
+                      </div>
+                      {loadingStates.summary && (
+                        <div className="mt-2 text-xs text-blue-600">Generating...</div>
+                      )}
+                    </Card>
+
+                    <Card 
+                      className="p-3 hover:shadow-md transition-all cursor-pointer border-2 hover:border-green-300"
+                      onClick={generateQuiz}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <div className="w-4 h-4 bg-green-600 rounded"></div>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm">Quiz Questions</h3>
+                          <p className="text-xs text-muted-foreground">Create practice questions</p>
+                        </div>
+                      </div>
+                      {loadingStates.quiz && (
+                        <div className="mt-2 text-xs text-green-600">Generating...</div>
+                      )}
+                    </Card>
+
+                    <Card 
+                      className="p-3 hover:shadow-md transition-all cursor-pointer border-2 hover:border-purple-300"
+                      onClick={generateStudyPlan}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <div className="w-4 h-4 bg-purple-600 rounded"></div>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm">Study Plan</h3>
+                          <p className="text-xs text-muted-foreground">Generate learning path</p>
+                        </div>
+                      </div>
+                      {loadingStates.studyPlan && (
+                        <div className="mt-2 text-xs text-purple-600">Generating...</div>
+                      )}
+                    </Card>
+
+                    <Card 
+                      className="p-3 hover:shadow-md transition-all cursor-pointer border-2 hover:border-orange-300"
+                      onClick={createAIConnections}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                          <div className="w-4 h-4 bg-orange-600 rounded"></div>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm">Auto-Connect</h3>
+                          <p className="text-xs text-muted-foreground">Find related notes</p>
+                        </div>
+                      </div>
+                      {loadingStates.connections && (
+                        <div className="mt-2 text-xs text-orange-600">Finding...</div>
+                      )}
+                    </Card>
+
+                    <Card 
+                      className="p-3 hover:shadow-md transition-all cursor-pointer border-2 hover:border-red-300"
+                      onClick={regenerateAnalysis}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-red-100 rounded-lg">
+                          <div className="w-4 h-4 bg-red-600 rounded"></div>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm">Deep Analysis</h3>
+                          <p className="text-xs text-muted-foreground">Comprehensive insights</p>
+                        </div>
+                      </div>
+                      {loadingStates.analysis && (
+                        <div className="mt-2 text-xs text-red-600">Analyzing...</div>
+                      )}
+                    </Card>
+                  </div>
+
+                  {/* AI Results Display */}
+                  <div className="space-y-3">
+                    {aiSuggestions.summary && (
+                      <Card className="p-3 border-l-4 border-l-blue-500">
+                        <h4 className="font-medium text-sm mb-2">Summary</h4>
+                        <p className="text-sm text-muted-foreground">{aiSuggestions.summary}</p>
+                      </Card>
+                    )}
+                    
+                    {aiSuggestions.quiz && (
+                      <Card className="p-3 border-l-4 border-l-green-500">
+                        <h4 className="font-medium text-sm mb-2">Quiz Questions</h4>
+                        <div className="space-y-2">
+                          {aiSuggestions.quiz.map((question, index) => (
+                            <div key={index} className="text-sm">
+                              <p className="font-medium mb-1">{question.question}</p>
+                              <p className="text-muted-foreground">Answer: {question.answer}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {aiSuggestions.study_plan && (
+                      <Card className="p-3 border-l-4 border-l-purple-500">
+                        <h4 className="font-medium text-sm mb-2">Study Plan</h4>
+                        <div className="space-y-1">
+                          {aiSuggestions.study_plan.map((step, index) => (
+                            <div key={index} className="text-sm text-muted-foreground">
+                              {index + 1}. {step}
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {aiSuggestions.connections && (
+                      <Card className="p-3 border-l-4 border-l-orange-500">
+                        <h4 className="font-medium text-sm mb-2">Related Notes</h4>
+                        <div className="space-y-1">
+                          {aiSuggestions.connections.map((connection, index) => (
+                            <div key={index} className="text-sm text-muted-foreground">
+                              {connection.title}
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {aiSuggestions.analysis && (
+                      <Card className="p-3 border-l-4 border-l-red-500">
+                        <h4 className="font-medium text-sm mb-2">Deep Analysis</h4>
+                        <p className="text-sm text-muted-foreground">{aiSuggestions.analysis}</p>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }; 

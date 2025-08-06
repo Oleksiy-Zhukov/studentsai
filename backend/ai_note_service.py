@@ -7,8 +7,9 @@ import re
 import json
 from typing import List, Dict, Optional, Tuple
 from sqlalchemy.orm import Session
-from models_study import KnowledgeNode, KnowledgeConnection
-from ai_connection_service import AIConnectionService
+from models import KnowledgeNode, KnowledgeConnection
+
+# from ai_connection_service import AIConnectionService  # Removed - functionality moved to ai_service_manager
 from ai_service_manager import ai_service_manager
 import numpy as np
 from datetime import datetime
@@ -19,7 +20,6 @@ class HybridAINoteService:
     """Production-ready hybrid AI service using AIServiceManager."""
 
     def __init__(self):
-        self.connection_service = AIConnectionService()
         self.ai_manager = ai_service_manager
         # Get OpenAI client from AI service manager
         self.openai_client = self.ai_manager.openai_client
@@ -219,21 +219,33 @@ class HybridAINoteService:
         suggestions.sort(key=lambda x: x["weight"], reverse=True)
         return suggestions[:5]
 
-    def generate_quiz_questions(self, note: KnowledgeNode) -> List[Dict]:
+    def generate_quiz_questions(
+        self, note: KnowledgeNode, tier: str = "free"
+    ) -> List[Dict]:
         """Generate quiz questions using AI service manager."""
         content = note.content or ""
         title = note.title or ""
 
-        return self.ai_manager.generate_quiz_questions(content, title)
+        print(
+            f"DEBUG: ai_note_service.generate_quiz_questions called with tier={tier}, content_length={len(content)}"
+        )
+        result = self.ai_manager.generate_quiz_questions(content, title, tier)
+        print(
+            f"DEBUG: ai_note_service.generate_quiz_questions returning {len(result)} questions"
+        )
+        return result
 
     def generate_summary(
-        self, note: KnowledgeNode, connected_notes: List[KnowledgeNode] = None
+        self,
+        note: KnowledgeNode,
+        tier: str = "free",
+        connected_notes: List[KnowledgeNode] = None,
     ) -> str:
         """Generate summary using AI service manager."""
         content = note.content or ""
         title = note.title or ""
 
-        return self.ai_manager.generate_summary(content, title)
+        return self.ai_manager.generate_summary(content, title, tier)
 
     def generate_study_recommendations(self, user_id: str, db: Session) -> List[Dict]:
         """Generate personalized study recommendations."""
@@ -282,34 +294,12 @@ class HybridAINoteService:
 
         return recommendations
 
-    def generate_study_plan(self, note: KnowledgeNode) -> str:
-        """Generate study plan using OpenAI (high-value task)."""
-        if not self.openai_client:
-            return self._generate_study_plan_local(note)
-
+    def generate_study_plan(self, note: KnowledgeNode, tier: str = "free") -> str:
+        """Generate study plan using AI service manager."""
         content = note.content or ""
         title = note.title or ""
 
-        try:
-            response = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert study coach. Create a personalized study plan for the given content.",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Create a study plan for: {title}\n\nContent: {content}",
-                    },
-                ],
-                max_tokens=500,
-                temperature=0.7,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"OpenAI study plan generation failed: {e}")
-            return self._generate_study_plan_local(note)
+        return self.ai_manager.generate_study_plan(content, title, tier)
 
     # Local model implementations
     def _extract_keywords_local(self, text: str) -> List[str]:
@@ -337,35 +327,6 @@ class HybridAINoteService:
 
         return questions
 
-    def _generate_questions_openai(self, content: str, title: str) -> List[Dict]:
-        """Generate questions using OpenAI."""
-        if not self.openai_client:
-            return []
-
-        try:
-            response = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Generate 2-3 quiz questions about the given content. Return as JSON array with 'question', 'answer', 'concept', 'type' fields.",
-                    },
-                    {"role": "user", "content": f"Title: {title}\nContent: {content}"},
-                ],
-                max_tokens=300,
-                temperature=0.7,
-            )
-
-            # Parse JSON response
-            import json
-
-            questions_text = response.choices[0].message.content
-            questions = json.loads(questions_text)
-            return questions
-        except Exception as e:
-            print(f"OpenAI question generation failed: {e}")
-            return []
-
     def _generate_summary_local(
         self, note: KnowledgeNode, connected_notes: List[KnowledgeNode] = None
     ) -> str:
@@ -390,29 +351,6 @@ class HybridAINoteService:
             summary += f"**AI Rating:** {note.ai_rating:.1%}\n"
 
         return summary
-
-    def _generate_summary_openai(self, content: str, title: str) -> str:
-        """Generate enhanced summary using OpenAI."""
-        if not self.openai_client:
-            return ""
-
-        try:
-            response = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Create a clear, concise summary of the given content. Use markdown formatting.",
-                    },
-                    {"role": "user", "content": f"Title: {title}\nContent: {content}"},
-                ],
-                max_tokens=300,
-                temperature=0.5,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"OpenAI summary generation failed: {e}")
-            return ""
 
     # Helper methods (keeping existing ones but making them local-focused)
     def _analyze_complexity_local(self, content: str) -> float:
@@ -624,23 +562,76 @@ class HybridAINoteService:
         return tags
 
     def _generate_study_plan_local(self, note: KnowledgeNode) -> str:
-        """Generate basic study plan using local analysis."""
+        """Generate enhanced study plan using local analysis."""
         content = note.content or ""
         title = note.title or ""
+        difficulty = note.difficulty_level or "beginner"
+        tags = note.tags or []
+
+        # Extract key concepts for personalized plan
+        keywords = self._extract_keywords_local(content)
+        key_concepts = keywords[:5] if keywords else ["key concepts"]
+
+        # Determine study duration based on content length and difficulty
+        word_count = len(content.split())
+        if word_count < 100:
+            duration = "15-30 minutes"
+        elif word_count < 500:
+            duration = "30-60 minutes"
+        else:
+            duration = "1-2 hours"
 
         plan = f"## Study Plan for {title}\n\n"
-        plan += "### 1. Review Key Concepts\n"
-        plan += "- Read through the content carefully\n"
-        plan += "- Identify main ideas and supporting details\n\n"
+        plan += f"**Estimated Duration:** {duration}\n"
+        plan += f"**Difficulty Level:** {difficulty.title()}\n"
+        if tags:
+            plan += f"**Topics:** {', '.join(tags)}\n"
+        plan += "\n"
 
-        plan += "### 2. Practice Activities\n"
+        plan += "### 1. Initial Review (10-15 minutes)\n"
+        plan += "- Skim through the content to get an overview\n"
+        plan += "- Highlight key terms and concepts\n"
+        plan += f"- Focus on understanding: {', '.join(key_concepts[:3])}\n\n"
+
+        plan += "### 2. Deep Learning (20-30 minutes)\n"
+        plan += "- Read the content thoroughly\n"
+        plan += "- Take notes on main ideas and supporting details\n"
+        plan += "- Create mind maps or diagrams if helpful\n"
+        plan += "- Look up any unfamiliar terms\n\n"
+
+        plan += "### 3. Active Practice (15-20 minutes)\n"
         plan += "- Create flashcards for key terms\n"
-        plan += "- Summarize the content in your own words\n"
-        plan += "- Discuss with peers or study group\n\n"
+        plan += "- Write a summary in your own words\n"
+        plan += "- Generate practice questions\n"
+        plan += "- Discuss concepts with a study partner\n\n"
 
-        plan += "### 3. Assessment\n"
-        plan += "- Test your understanding with practice questions\n"
-        plan += "- Review any areas of confusion\n\n"
+        plan += "### 4. Assessment & Review (10-15 minutes)\n"
+        plan += "- Test your understanding with self-quizzes\n"
+        plan += "- Review any areas of confusion\n"
+        plan += "- Connect this topic to previous knowledge\n\n"
+
+        # Add difficulty-specific recommendations
+        if difficulty == "beginner":
+            plan += "### 5. Beginner Tips\n"
+            plan += "- Take your time to understand fundamentals\n"
+            plan += "- Practice with simple examples\n"
+            plan += "- Don't hesitate to review basic concepts\n\n"
+        elif difficulty == "intermediate":
+            plan += "### 5. Intermediate Tips\n"
+            plan += "- Focus on connections between concepts\n"
+            plan += "- Apply knowledge to real-world scenarios\n"
+            plan += "- Challenge yourself with advanced problems\n\n"
+        elif difficulty == "advanced":
+            plan += "### 5. Advanced Tips\n"
+            plan += "- Explore edge cases and exceptions\n"
+            plan += "- Research related topics for deeper understanding\n"
+            plan += "- Consider teaching the concept to others\n\n"
+
+        plan += "### 6. Follow-up Activities\n"
+        plan += "- Review this material within 24 hours\n"
+        plan += "- Practice spaced repetition over the next week\n"
+        plan += "- Apply concepts in practical exercises\n"
+        plan += "- Track your progress and understanding\n\n"
 
         return plan
 
@@ -651,3 +642,7 @@ class HybridAINoteService:
             matches = re.findall(pattern, content, re.IGNORECASE)
             connections.extend(matches)
         return connections
+
+    def analyze_content(self, content: str, title: str) -> Dict:
+        """Analyze content and return comprehensive AI analysis."""
+        return self.process_note_content(content, title)

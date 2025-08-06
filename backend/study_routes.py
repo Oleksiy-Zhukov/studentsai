@@ -3,23 +3,24 @@ Main API routes for the Smart Study Flow feature.
 Handles knowledge nodes, connections, study sessions, and learning paths.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from tier_utils import check_and_increment_quota
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
-from database_study import get_db
-from models_study import (
+from database import get_db
+from models import (
     User,
     KnowledgeNode,
     KnowledgeConnection,
     StudySession,
     LearningPath,
 )
-from auth_study import get_current_user, create_access_token
+from auth import get_current_user
 from ai_note_service import HybridAINoteService
-from schemas_study import (
+from schemas import (
     KnowledgeNodeCreate,
     KnowledgeNodeUpdate,
     KnowledgeNodeResponse,
@@ -45,6 +46,8 @@ ai_note_service = HybridAINoteService()
 @router.post("/refresh-token")
 async def refresh_token(current_user: User = Depends(get_current_user)):
     """Refresh the JWT token."""
+    from auth import create_access_token
+
     access_token = create_access_token(data={"sub": str(current_user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -508,8 +511,14 @@ async def generate_note_summary(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
+    # Quota enforcement
+    check_and_increment_quota(
+        str(current_user.id), current_user.subscription_tier, "summary"
+    )
+
+    tier = current_user.subscription_tier or "free"
     try:
-        summary = ai_note_service.generate_summary(note)
+        summary = ai_note_service.generate_summary(note, tier)
         return {"summary": summary}
     except Exception as e:
         raise HTTPException(
@@ -533,8 +542,14 @@ async def generate_note_quiz(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
+    # Quota enforcement
+    check_and_increment_quota(
+        str(current_user.id), current_user.subscription_tier, "quiz"
+    )
+
+    tier = current_user.subscription_tier or "free"
     try:
-        quiz_questions = ai_note_service.generate_quiz_questions(note)
+        quiz_questions = ai_note_service.generate_quiz_questions(note, tier)
         return {"quiz_questions": quiz_questions}
     except Exception as e:
         raise HTTPException(
@@ -558,8 +573,14 @@ async def generate_note_study_plan(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
+    # Quota enforcement
+    check_and_increment_quota(
+        str(current_user.id), current_user.subscription_tier, "study_plan"
+    )
+
+    tier = current_user.subscription_tier or "free"
     try:
-        study_plan = ai_note_service.generate_study_plan(note)
+        study_plan = ai_note_service.generate_study_plan(note, tier)
         return {"study_plan": study_plan}
     except Exception as e:
         raise HTTPException(
@@ -583,6 +604,11 @@ async def regenerate_note_analysis(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
+    # Quota enforcement
+    check_and_increment_quota(
+        str(current_user.id), current_user.subscription_tier, "analysis"
+    )
+
     try:
         # Get all notes for connection analysis
         all_notes = (
@@ -592,10 +618,11 @@ async def regenerate_note_analysis(
         )
 
         # Generate complete analysis
+        tier = current_user.subscription_tier or "free"
         suggestions = ai_note_service.suggest_connections(note, all_notes, db)
-        quiz_questions = ai_note_service.generate_quiz_questions(note)
-        summary = ai_note_service.generate_summary(note)
-        study_plan = ai_note_service.generate_study_plan(note)
+        quiz_questions = ai_note_service.generate_quiz_questions(note, tier)
+        summary = ai_note_service.generate_summary(note, tier)
+        study_plan = ai_note_service.generate_study_plan(note, tier)
         ai_analysis = ai_note_service.analyze_content(note.content)
 
         return {

@@ -151,7 +151,8 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
         />
         
         <div className="flex-1 relative">
-          <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
+          {/* Full-screen controls - positioned to avoid layering issues */}
+          <div className="absolute top-4 right-4 z-50 flex items-center space-x-2 bg-background/80 backdrop-blur-sm rounded-lg p-2 border border-border shadow-lg">
             <Button
               variant="outline"
               size="sm"
@@ -216,11 +217,13 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
         {/* Main Content Area */}
         <Panel defaultSize={graphVisible ? 60 : 80} minSize={40}>
           <div className="h-full flex flex-col">
-            <NoteEditor 
-              note={selectedNote}
-              onNoteUpdate={handleNoteUpdate}
-              onNoteCreate={handleNoteCreate}
-            />
+            <div className="flex-1 overflow-auto">
+              <NoteEditor 
+                note={selectedNote}
+                onNoteUpdate={handleNoteUpdate}
+                onNoteCreate={handleNoteCreate}
+              />
+            </div>
           </div>
         </Panel>
 
@@ -229,56 +232,66 @@ export const Dashboard = ({ onLogout, onNavigateToMain, onNavigateToProfile }) =
           <>
             <PanelResizeHandle className="w-1 bg-border hover:bg-foreground/20 transition-colors" />
             <Panel defaultSize={20} minSize={15} maxSize={40}>
-              <div className="h-full flex flex-col">
-                {/* Graph Header with Controls */}
-                <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
-                  <div className="flex items-center space-x-2">
-                    <h3 className="font-semibold japanese-text text-foreground">Knowledge Graph</h3>
-                    {lastUpdate && (
-                      <span className="text-xs text-muted-foreground">
-                        Updated: {lastUpdate.toLocaleTimeString()}
-                      </span>
-                    )}
+              <PanelGroup direction="vertical" className="h-full">
+                {/* Graph Section */}
+                <Panel defaultSize={70} minSize={30}>
+                  <div className="h-full flex flex-col">
+                    {/* Graph Header with Controls */}
+                    <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold japanese-text text-foreground">Knowledge Graph</h3>
+                        {lastUpdate && (
+                          <span className="text-xs text-muted-foreground">
+                            Updated: {lastUpdate.toLocaleTimeString()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRefreshData}
+                          disabled={aiProcessing}
+                          className="p-1 h-8 w-8"
+                          title="Refresh Data"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${aiProcessing ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleGraphExpanded}
+                          className="p-1 h-8 w-8"
+                          title="Expand Graph"
+                        >
+                          <Maximize2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Knowledge Graph */}
+                    <div className="flex-1 overflow-hidden">
+                      <KnowledgeGraph 
+                        notes={notes}
+                        selectedNote={selectedNote}
+                        onNodeSelect={handleNodeSelect}
+                        isExpanded={false}
+                        graphData={graphData}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRefreshData}
-                      disabled={aiProcessing}
-                      className="p-1 h-8 w-8"
-                      title="Refresh Data"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${aiProcessing ? 'animate-spin' : ''}`} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleGraphExpanded}
-                      className="p-1 h-8 w-8"
-                      title="Expand Graph"
-                    >
-                      <Maximize2 className="w-4 h-4" />
-                    </Button>
+                </Panel>
+
+                {/* Vertical Resize Handle */}
+                <PanelResizeHandle className="h-1 bg-border hover:bg-foreground/20 transition-colors" />
+
+                {/* Progress Section */}
+                <Panel defaultSize={30} minSize={20}>
+                  <div className="h-full">
+                    <ProgressPanel />
                   </div>
-                </div>
-                
-                {/* Knowledge Graph */}
-                <div className="flex-1 overflow-hidden">
-                  <KnowledgeGraph 
-                    notes={notes}
-                    selectedNote={selectedNote}
-                    onNodeSelect={handleNodeSelect}
-                    isExpanded={false}
-                    graphData={graphData}
-                  />
-                </div>
-                
-                {/* Progress Panel */}
-                <div className="border-t border-border">
-                  <ProgressPanel />
-                </div>
-              </div>
+                </Panel>
+              </PanelGroup>
             </Panel>
           </>
         )}
