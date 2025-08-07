@@ -1,48 +1,55 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
-import { LogOut, Brain } from 'lucide-react'
+import { type User } from '@/lib/api'
+import { LogOut, User, Settings } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface HeaderProps {
-  user?: { email: string } | null
+  user: User
   onLogout: () => void
 }
 
 export function Header({ user, onLogout }: HeaderProps) {
-  const handleLogout = () => {
-    api.clearToken()
-    onLogout()
-  }
-
   return (
-    <header className="border-b border-gray-200 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-2">
-            <Brain className="h-8 w-8 text-orange-500" />
-            <h1 className="text-xl font-bold text-gray-900">StudentsAI</h1>
-            <span className="text-sm text-gray-500 hidden sm:inline">
-              Your intelligent study companion
-            </span>
+    <header className="bg-white border-b border-gray-200 px-6 py-3">
+      <div className="flex items-center justify-between">
+        {/* Logo and Title */}
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">AI</span>
           </div>
-          
-          {user && (
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600 hidden sm:inline">
-                {user.email}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="flex items-center space-x-1"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign Out</span>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">StudentsAI Toolkit</h1>
+            <p className="text-xs text-gray-500">AI-powered note-taking & studying</p>
+          </div>
+        </div>
+
+        {/* User Menu */}
+        <div className="flex items-center space-x-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">{user.email}</span>
               </Button>
-            </div>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onLogout} className="text-red-600">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

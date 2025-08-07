@@ -305,4 +305,3 @@ For support and questions:
 ---
 
 **Built with ❤️ for students who want to learn smarter, not harder.**
-

@@ -2,10 +2,15 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type Note } from '@/lib/api'
 import { formatDate, truncateText, getWordCount } from '@/lib/utils'
-import { Edit, Trash2, FileText, Calendar, Hash } from 'lucide-react'
+import { Edit, Trash2, FileText, Calendar, Hash, MoreHorizontal } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface NotesListProps {
   notes: Note[]
@@ -30,83 +35,75 @@ export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps)
 
   if (notes.length === 0) {
     return (
-      <div className="text-center py-12">
-        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No notes yet</h3>
-        <p className="text-gray-600">Create your first note to get started with AI-powered studying.</p>
+      <div className="p-4 text-center">
+        <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+        <p className="text-sm text-gray-500">No notes yet</p>
+        <p className="text-xs text-gray-400 mt-1">Create your first note to get started</p>
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-1 p-2">
       {notes.map((note) => (
-        <Card 
-          key={note.id} 
-          className="hover:shadow-md transition-shadow cursor-pointer"
+        <div
+          key={note.id}
+          className="group relative flex items-center space-x-3 rounded-lg px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors"
           onClick={() => onSelect(note)}
         >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg line-clamp-2">
-              {note.title}
-            </CardTitle>
-            <CardDescription className="flex items-center space-x-4 text-xs">
-              <span className="flex items-center space-x-1">
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(note.updated_at)}</span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <Hash className="h-3 w-3" />
-                <span>{getWordCount(note.content)} words</span>
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-              {truncateText(note.content, 150)}
-            </p>
-            
-            {note.summary && (
-              <div className="bg-orange-50 border border-orange-200 rounded p-2 mb-4">
-                <p className="text-xs text-orange-800 line-clamp-2">
-                  <strong>Summary:</strong> {truncateText(note.summary, 100)}
-                </p>
-              </div>
-            )}
+          {/* Note Icon */}
+          <div className="flex-shrink-0">
+            <FileText className="h-4 w-4 text-gray-500" />
+          </div>
 
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-1">
+          {/* Note Content */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {note.title}
+            </p>
+            <div className="flex items-center space-x-2 text-xs text-gray-500">
+              <span>{formatDate(note.updated_at)}</span>
+              <span>•</span>
+              <span>{getWordCount(note.content)} words</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
+                  variant="ghost"
                   size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onEdit(note)
-                  }}
-                  className="flex items-center space-x-1"
+                  className="h-6 w-6 p-0"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Edit className="h-3 w-3" />
-                  <span className="hidden sm:inline">Edit</span>
+                  <MoreHorizontal className="h-3 w-3" />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation()
+                  onEdit(note)
+                }}>
+                  <Edit className="h-3 w-3 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e: React.MouseEvent) => {
                     e.stopPropagation()
                     handleDelete(note.id)
                   }}
                   disabled={deletingId === note.id}
-                  className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                  className="text-red-600"
                 >
-                  <Trash2 className="h-3 w-3" />
-                  <span className="hidden sm:inline">
-                    {deletingId === note.id ? 'Deleting...' : 'Delete'}
-                  </span>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  {deletingId === note.id ? 'Deleting...' : 'Delete'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       ))}
     </div>
   )
