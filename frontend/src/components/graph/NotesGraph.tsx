@@ -5,7 +5,7 @@ import { select } from 'd3-selection'
 import { zoom, type D3ZoomEvent } from 'd3-zoom'
 import { drag, type D3DragEvent } from 'd3-drag'
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, type SimulationNodeDatum, type SimulationLinkDatum } from 'd3-force'
-import { api, type GraphData, type GraphNode } from '@/lib/api'
+import { api, APIError, type GraphData, type GraphNode } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Network, RefreshCw } from 'lucide-react'
@@ -35,6 +35,13 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [interactionMode, setInteractionMode] = useState<'repel' | 'attract'>('repel')
+  const interactionModeRef = useRef<'repel' | 'attract'>(interactionMode)
+  const isDraggingRef = useRef<boolean>(false)
+
+  useEffect(() => {
+    interactionModeRef.current = interactionMode
+  }, [interactionMode])
 
   const loadGraphData = async () => {
     try {
@@ -44,7 +51,11 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       setGraphData(data)
     } catch (err) {
       console.error('Failed to load graph data:', err)
-      setError('Failed to load graph data')
+      if (err instanceof APIError) {
+        setError(`Failed to load graph (status ${err.status}): ${err.message}`)
+      } else {
+        setError('Failed to load graph data')
+      }
     } finally {
       setLoading(false)
     }
@@ -124,13 +135,16 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     // Node radius helper
     const nodeRadius = (d: GraphSimulationNode) => Math.min(32, Math.sqrt((d.word_count || 100) / 10) + 8)
 
+    // Forces
+    const chargeForce = forceManyBody().strength(-260)
+
     // Create simulation with tuned forces to reduce jitter/overlap
     const simulation = forceSimulation<GraphSimulationNode>(simulationNodes)
       .force('link', forceLink<GraphSimulationNode, GraphSimulationLink>(validConnections)
         .id((d: GraphSimulationNode) => d.id)
         .distance(120)
         .strength(0.6))
-      .force('charge', forceManyBody().strength(-260))
+      .force('charge', chargeForce)
       .force('center', forceCenter((width - margin.left - margin.right) / 2, (height - margin.top - margin.bottom) / 2))
       .force('collision', forceCollide<GraphSimulationNode>().radius((d: GraphSimulationNode) => nodeRadius(d) + 6).iterations(2))
       .alpha(1)
@@ -161,6 +175,15 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .call(drag<SVGCircleElement, GraphSimulationNode>()
         .on('start', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           if (!event.active) simulation.alphaTarget(0.3).restart()
+          // Adjust physics on drag start based on interaction mode
+          if (interactionModeRef.current === 'attract') {
+            chargeForce.strength(240)
+          } else {
+            chargeForce.strength(-300)
+          }
+          isDraggingRef.current = true
+          // Suppress any tooltip while dragging
+          select('body').selectAll('div.tooltip').style('visibility', 'hidden')
           d.fx = d.x
           d.fy = d.y
         })
@@ -170,6 +193,9 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
         })
         .on('end', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           if (!event.active) simulation.alphaTarget(0)
+          // Reset physics to default repel after drag ends
+          chargeForce.strength(-260)
+          isDraggingRef.current = false
           d.fx = null
           d.fy = null
         }))
@@ -193,7 +219,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('dy', '0.35em')
       .style('pointer-events', 'none')
 
-    // Add tooltips (clean any existing first)
+    // Add tooltips (clean any existing first) and configure interactions
     select('body').selectAll('div.tooltip').remove()
     const tooltip = select('body').append('div')
       .attr('class', 'tooltip')
@@ -207,21 +233,39 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .style('max-width', '200px')
       .style('z-index', '1000')
 
+    let hoverTimeout: ReturnType<typeof setTimeout> | null = null
+    const showTooltip = (html: string) => {
+      tooltip.style('visibility', 'visible').html(html)
+    }
+    const hideTooltip = () => {
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout)
+        hoverTimeout = null
+      }
+      tooltip.style('visibility', 'hidden')
+    }
+
     nodes
       .on('mouseover', (_event: MouseEvent, d: GraphSimulationNode) => {
-        tooltip.style('visibility', 'visible')
-          .html(`
+        if (isDraggingRef.current) return
+        if (hoverTimeout) clearTimeout(hoverTimeout)
+        hoverTimeout = setTimeout(() => {
+          if (isDraggingRef.current) return
+          showTooltip(`
             <strong>${d.title || 'Untitled'}</strong><br/>
             ${d.content_preview || 'No preview available'}<br/>
             <em>${d.word_count || 0} words</em>
           `)
+        }, 250)
       })
       .on('mousemove', (event: MouseEvent) => {
-        tooltip.style('top', (event.pageY - 10) + 'px')
-          .style('left', (event.pageX + 10) + 'px')
+        if (tooltip.style('visibility') === 'visible') {
+          tooltip.style('top', (event.pageY - 10) + 'px')
+            .style('left', (event.pageX + 10) + 'px')
+        }
       })
       .on('mouseout', () => {
-        tooltip.style('visibility', 'hidden')
+        hideTooltip()
       })
 
     // Update positions on simulation tick
@@ -240,6 +284,12 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
         .attr('x', (d: GraphSimulationNode) => d.x || 0)
         .attr('y', (d: GraphSimulationNode) => (d.y || 0) + nodeRadius(d) + 13)
     })
+
+    // Hide tooltip on clicks
+    const onAnyClick = () => {
+      select('body').selectAll('div.tooltip').style('visibility', 'hidden')
+    }
+    document.addEventListener('click', onAnyClick)
 
     // Stop simulation when stabilized to reduce jitter
     simulation.on('end', () => {
@@ -260,6 +310,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       tooltip.remove()
       simulation.stop()
       svg.on('.zoom', null)
+      document.removeEventListener('click', onAnyClick)
     }
   }, [graphData, onNodeClick])
 
@@ -341,16 +392,32 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
             <Network className="h-5 w-5" />
             <span>Notes Graph</span>
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadGraphData}
-            disabled={loading}
-            className="flex items-center space-x-1"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-md border border-gray-200 overflow-hidden">
+              <button
+                className={`px-3 py-1 text-sm ${interactionMode === 'repel' ? 'bg-orange-50 text-orange-700' : 'bg-white text-gray-700'} hover:bg-orange-50`}
+                onClick={() => setInteractionMode('repel')}
+              >
+                Repel
+              </button>
+              <button
+                className={`px-3 py-1 text-sm border-l border-gray-200 ${interactionMode === 'attract' ? 'bg-orange-50 text-orange-700' : 'bg-white text-gray-700'} hover:bg-orange-50`}
+                onClick={() => setInteractionMode('attract')}
+              >
+                Attract
+              </button>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadGraphData}
+              disabled={loading}
+              className="flex items-center space-x-1"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Refresh</span>
+            </Button>
+          </div>
         </div>
         <p className="text-sm text-gray-600">
           Visualizing {graphData.nodes.length} notes with {graphData.connections?.length || 0} connections.

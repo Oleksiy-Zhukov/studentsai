@@ -10,6 +10,8 @@ import { NotesGraph } from '@/components/graph/NotesGraph'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type Note, type User, APIError } from '@/lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Plus, FileText, Zap, Network, Search, FolderOpen } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -23,6 +25,9 @@ export default function Home() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([])
+  const [backlinks, setBacklinks] = useState<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>>([])
+  const [tagsSaving, setTagsSaving] = useState(false)
 
   useEffect(() => {
     // Check for existing auth
@@ -119,6 +124,86 @@ export default function Home() {
     setCurrentView('flashcards')
   }
 
+  const transformWikiLinksToMarkdown = (text: string): string =>
+    text.replace(/\[\[([^\[\]]+)\]\]/g, (_m, p1) => `[${p1}](#note=${encodeURIComponent(String(p1).trim())})`)
+
+  const navigateToTitle = (title: string) => {
+    const target = notes.find(n => n.title.toLowerCase() === title.toLowerCase())
+    if (target) {
+      setSelectedNote(target)
+      setCurrentView('notes')
+    }
+  }
+
+  const selectFromHash = () => {
+    if (typeof window === 'undefined') return
+    const hash = window.location.hash || ''
+    const match = hash.match(/^#note=(.+)$/)
+    if (match && match[1]) {
+      const decoded = decodeURIComponent(match[1])
+      navigateToTitle(decoded)
+    }
+  }
+
+  useEffect(() => {
+    selectFromHash()
+    const handler = () => selectFromHash()
+    window.addEventListener('hashchange', handler)
+    return () => window.removeEventListener('hashchange', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes.length])
+
+  // Load suggested keywords and backlinks when a note is selected
+  useEffect(() => {
+    const run = async () => {
+      if (!selectedNote) {
+        setSuggestedKeywords([])
+        setBacklinks([])
+        return
+      }
+      try {
+        const [{ keywords }, backlinksResp] = await Promise.all([
+          api.getSuggestedKeywords(selectedNote.id),
+          api.getBacklinks(selectedNote.id),
+        ])
+        setSuggestedKeywords(keywords)
+        setBacklinks(backlinksResp)
+      } catch (e) {
+        // noop; sidebar can show empty states
+      }
+    }
+    run()
+  }, [selectedNote])
+
+  const addTag = async (tag: string) => {
+    if (!selectedNote) return
+    const current = selectedNote.tags || []
+    if (current.includes(tag)) return
+    setTagsSaving(true)
+    try {
+      const updated = await api.updateTags(selectedNote.id, [...current, tag])
+      // Update local state
+      setNotes(notes.map(n => (n.id === updated.id ? updated : n)))
+      setSelectedNote(updated)
+    } finally {
+      setTagsSaving(false)
+    }
+  }
+
+  const removeTag = async (tag: string) => {
+    if (!selectedNote) return
+    const current = selectedNote.tags || []
+    if (!current.includes(tag)) return
+    setTagsSaving(true)
+    try {
+      const updated = await api.updateTags(selectedNote.id, current.filter(t => t !== tag))
+      setNotes(notes.map(n => (n.id === updated.id ? updated : n)))
+      setSelectedNote(updated)
+    } finally {
+      setTagsSaving(false)
+    }
+  }
+
   const handleGraphNodeClick = (nodeId: string) => {
     const note = notes.find(n => n.id === nodeId)
     if (note) {
@@ -203,6 +288,7 @@ export default function Home() {
               note={selectedNote || undefined}
               onSave={handleSaveNote}
               onCancel={() => setCurrentView('notes')}
+              onNavigateByTitle={navigateToTitle}
             />
           ) : currentView === 'flashcards' && selectedNote ? (
             <FlashcardViewer
@@ -269,9 +355,48 @@ export default function Home() {
                             </div>
                           )}
                           
-                          <div className="prose max-w-none">
-                            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                              {selectedNote.content}
+                          <div className="prose prose-orange max-w-none">
+                            <div className="text-gray-700 leading-relaxed overflow-y-auto pb-24">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  a: ({ href, children, ...props }) => {
+                                    if (href && href.startsWith('#note=')) {
+                                      const title = decodeURIComponent(href.replace('#note=', ''))
+                                      return (
+                                        <a
+                                          href={href}
+                                          className="text-orange-600 underline"
+                                          onClick={(e) => {
+                                            e.preventDefault()
+                                            if (typeof window !== 'undefined') {
+                                              window.location.hash = `note=${encodeURIComponent(title)}`
+                                            }
+                                            navigateToTitle(title)
+                                          }}
+                                          {...props}
+                                        >
+                                          {children}
+                                        </a>
+                                      )
+                                    }
+                                    return (
+                                      <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-orange-600 underline"
+                                        {...props}
+                                      >
+                                        {children}
+                                      </a>
+                                    )
+                                  },
+                                  p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                                }}
+                              >
+                                {transformWikiLinksToMarkdown(selectedNote.content)}
+                              </ReactMarkdown>
                             </div>
                           </div>
                         </div>
@@ -292,18 +417,81 @@ export default function Home() {
 
                           <Separator />
 
-                          {/* Backlinks (placeholder) */}
+                          {/* Backlinks */}
                           <div>
                             <h3 className="font-medium text-gray-900 mb-2">Backlinks</h3>
-                            <p className="text-sm text-gray-500">No backlinks found</p>
+                            {backlinks.length === 0 ? (
+                              <p className="text-sm text-gray-500">No backlinks found</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {backlinks.map((b) => (
+                                  <button
+                                    key={b.note_id}
+                                    type="button"
+                                    onClick={() => {
+                                      const target = notes.find(n => n.id === b.note_id)
+                                      if (target) {
+                                        setSelectedNote(target)
+                                      }
+                                    }}
+                                    className="w-full text-left text-sm p-2 rounded hover:bg-gray-100"
+                                  >
+                                    <div className="font-medium text-gray-900 truncate">{b.title}</div>
+                                    {b.excerpt && (
+                                      <div className="text-gray-500 truncate">{b.excerpt}</div>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           <Separator />
 
-                          {/* Tags (placeholder) */}
+                          {/* Tags and suggested keywords */}
                           <div>
                             <h3 className="font-medium text-gray-900 mb-2">Tags</h3>
-                            <p className="text-sm text-gray-500">No tags</p>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {(selectedNote.tags || []).length === 0 ? (
+                                <p className="text-sm text-gray-500">No tags</p>
+                              ) : (
+                                (selectedNote.tags || []).map((t) => (
+                                  <span key={t} className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded text-xs">
+                                    {t}
+                                    <button
+                                      type="button"
+                                      title="Remove tag"
+                                      className="text-orange-700 hover:text-orange-900"
+                                      onClick={() => removeTag(t)}
+                                      disabled={tagsSaving}
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">Suggested</div>
+                              {suggestedKeywords.length === 0 ? (
+                                <p className="text-sm text-gray-500">No suggestions</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-2">
+                                  {suggestedKeywords.map((k) => (
+                                    <button
+                                      key={k}
+                                      type="button"
+                                      onClick={() => addTag(k)}
+                                      disabled={tagsSaving}
+                                      className="text-xs px-2 py-0.5 border border-gray-200 rounded hover:bg-gray-100"
+                                      title="Add tag"
+                                    >
+                                      + {k}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

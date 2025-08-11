@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -8,14 +8,17 @@ import { api, type Note } from '@/lib/api'
 import { Save, Sparkles, FileText, X, Eye, Edit } from 'lucide-react'
 import { getWordCount } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface NoteEditorProps {
   note?: Note
   onSave: (note: Note) => void
   onCancel: () => void
+  onNavigateByTitle?: (title: string) => void
 }
 
-export function NoteEditor({ note, onSave, onCancel }: NoteEditorProps) {
+export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEditorProps) {
   const [title, setTitle] = useState(note?.title || '')
   const [content, setContent] = useState(note?.content || '')
   const [loading, setLoading] = useState(false)
@@ -49,6 +52,9 @@ export function NoteEditor({ note, onSave, onCancel }: NoteEditorProps) {
       setLoading(false)
     }
   }
+
+  const transformWikiLinksToMarkdown = (text: string): string =>
+    text.replace(/\[\[([^\[\]]+)\]\]/g, (_m, p1) => `[${p1}](#note=${encodeURIComponent(String(p1).trim())})`)
 
   const handleSummarize = async () => {
     if (!content.trim()) {
@@ -187,10 +193,41 @@ export function NoteEditor({ note, onSave, onCancel }: NoteEditorProps) {
                 </div>
               )}
               
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                  {content || 'No content yet...'}
-                </div>
+              <div className="prose prose-orange max-w-none">
+                {content ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        if (href && href.startsWith('#note=')) {
+                          const title = decodeURIComponent(href.replace('#note=', ''))
+                          return (
+                            <a
+                              href={href}
+                              className="text-orange-600 underline"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (typeof window !== 'undefined') {
+                                  window.location.hash = `note=${encodeURIComponent(title)}`
+                                }
+                                onNavigateByTitle?.(title)
+                              }}
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          )
+                        }
+                        return <a className="text-orange-600 underline" href={href} {...props}>{children}</a>
+                      },
+                      p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                    }}
+                  >
+                    {transformWikiLinksToMarkdown(content)}
+                  </ReactMarkdown>
+                ) : (
+                  <div className="text-gray-500">No content yet...</div>
+                )}
               </div>
             </div>
           </div>

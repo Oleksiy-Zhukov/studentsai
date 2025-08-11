@@ -13,6 +13,7 @@ export interface Note {
   summary?: string
   created_at: string
   updated_at: string
+  tags?: string[]
 }
 
 export interface Flashcard {
@@ -202,6 +203,34 @@ class APIClient {
   // Graph endpoint
   async getNotesGraph(): Promise<GraphData> {
     return this.request('/graph')
+  }
+
+  // Keywords/tags/backlinks
+  async getSuggestedKeywords(noteId: string): Promise<{ note_id: string; keywords: string[] }> {
+    return this.request(`/notes/${noteId}/keywords`)
+  }
+
+  async updateTags(noteId: string, tags: string[]): Promise<Note> {
+    return this.request(`/notes/${noteId}/tags`, {
+      method: 'PUT',
+      body: JSON.stringify({ tags }),
+    })
+  }
+
+  async getBacklinks(noteId: string): Promise<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>> {
+    return this.request(`/notes/${noteId}/backlinks`)
+  }
+
+  async createManualLink(noteId: string, targetNoteId: string): Promise<{ message: string }> {
+    return this.request(`/notes/${noteId}/links?target_note_id=${encodeURIComponent(targetNoteId)}`, {
+      method: 'POST',
+    })
+  }
+
+  async deleteManualLink(noteId: string, targetNoteId: string): Promise<{ message: string }> {
+    return this.request(`/notes/${noteId}/links/${encodeURIComponent(targetNoteId)}`, {
+      method: 'DELETE',
+    })
   }
 }
 
