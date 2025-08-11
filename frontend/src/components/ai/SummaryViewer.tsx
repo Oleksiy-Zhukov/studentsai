@@ -12,7 +12,7 @@ import {
   TrendingDown,
   Loader2
 } from 'lucide-react'
-import api from '@/lib/api'
+import { api } from '@/lib/api'
 
 interface SummaryViewerProps {
   text: string
@@ -35,16 +35,15 @@ export function SummaryViewer({ text, onClose }: SummaryViewerProps) {
     
     try {
       const response = await api.summarizeText(text)
-      if (response.error) {
-        setError(response.error)
-      } else if (response.data) {
-        setSummary(response.data.summary)
-        setStats({
-          originalWords: response.data.word_count_original,
-          summaryWords: response.data.word_count_summary,
-          compressionRatio: Math.round((1 - response.data.word_count_summary / response.data.word_count_original) * 100)
-        })
-      }
+      // API returns { summary, word_count, original_length }
+      setSummary(response.summary)
+      const originalWords = text.split(/\s+/).filter(Boolean).length
+      const summaryWords = response.word_count
+      setStats({
+        originalWords,
+        summaryWords,
+        compressionRatio: Math.round((1 - summaryWords / Math.max(1, originalWords)) * 100)
+      })
     } catch (err) {
       setError('Failed to generate summary')
     } finally {
@@ -182,7 +181,7 @@ export function SummaryViewer({ text, onClose }: SummaryViewerProps) {
               <Lightbulb className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No summary yet</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Click "Generate Summary" to create an AI-powered summary of your text.
+                Click &quot;Generate Summary&quot; to create an AI-powered summary of your text.
               </p>
             </div>
           )}

@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import * as d3 from 'd3'
-import { api, type GraphData, type GraphNode, type GraphConnection } from '@/lib/api'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { select } from 'd3-selection'
+import { zoom, type D3ZoomEvent } from 'd3-zoom'
+import { drag, type D3DragEvent } from 'd3-drag'
+import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, type SimulationNodeDatum, type SimulationLinkDatum } from 'd3-force'
+import { api, type GraphData, type GraphNode } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Network, RefreshCw } from 'lucide-react'
@@ -12,7 +15,7 @@ interface NotesGraphProps {
 }
 
 // Extend GraphNode with D3.js simulation properties
-interface SimulationNode extends GraphNode, d3.SimulationNodeDatum {
+interface GraphSimulationNode extends GraphNode, SimulationNodeDatum {
   x?: number
   y?: number
   fx?: number | null
@@ -20,9 +23,9 @@ interface SimulationNode extends GraphNode, d3.SimulationNodeDatum {
 }
 
 // D3.js link interface
-interface SimulationLink extends d3.SimulationLinkDatum<SimulationNode> {
-  source: SimulationNode
-  target: SimulationNode
+interface GraphSimulationLink extends SimulationLinkDatum<GraphSimulationNode> {
+  source: GraphSimulationNode
+  target: GraphSimulationNode
   similarity: number
   connection_type: string
 }
@@ -32,16 +35,6 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    loadGraphData()
-  }, [])
-
-  useEffect(() => {
-    if (graphData && svgRef.current) {
-      renderGraph()
-    }
-  }, [graphData])
 
   const loadGraphData = async () => {
     try {
@@ -57,7 +50,11 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     }
   }
 
-  const renderGraph = () => {
+  useEffect(() => {
+    loadGraphData()
+  }, [])
+
+  const renderGraph = useCallback((): (() => void) | void => {
     if (!graphData || !svgRef.current) return
 
     // Validate graph data
@@ -72,7 +69,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     }
 
     // Convert nodes to simulation nodes
-    const simulationNodes: SimulationNode[] = graphData.nodes.map(node => ({
+    const simulationNodes: GraphSimulationNode[] = graphData.nodes.map(node => ({
       ...node,
       x: undefined,
       y: undefined,
@@ -84,7 +81,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     const nodeMap = new Map(simulationNodes.map(node => [node.id, node]))
 
     // Filter and transform connections to D3.js format
-    const validConnections: SimulationLink[] = graphData.connections
+    const validConnections: GraphSimulationLink[] = graphData.connections
       .filter(connection => {
         const sourceExists = nodeMap.has(connection.source_id)
         const targetExists = nodeMap.has(connection.target_id)
@@ -103,27 +100,42 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       totalConnections: graphData.connections.length
     })
 
-    const svg = d3.select(svgRef.current)
+    const svg = select(svgRef.current)
     svg.selectAll('*').remove()
 
-    const width = 800
+    // Responsive sizing based on container width
+    const parent = (svgRef.current.parentElement as HTMLElement) || document.body
+    const width = Math.max(600, parent.clientWidth)
     const height = 600
     const margin = { top: 20, right: 20, bottom: 20, left: 20 }
 
-    svg.attr('width', width).attr('height', height)
+    svg
+      .attr('width', width)
+      .attr('height', height)
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
 
-    const g = svg.append('g')
+    // Layers: zoom/pan on rootG, chart elements inside chartG with margins
+    const rootG = svg.append('g').attr('class', 'zoom-layer')
+    const g = rootG.append('g')
+      .attr('class', 'chart-layer')
       .attr('transform', `translate(${margin.left},${margin.top})`)
 
-    // Create simulation with proper typing
-    const simulation = d3.forceSimulation<SimulationNode>(simulationNodes)
-      .force('link', d3.forceLink<SimulationNode, SimulationLink>(validConnections)
-        .id((d: SimulationNode) => d.id)
-        .distance(100)
-        .strength(0.5))
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30))
+    // Node radius helper
+    const nodeRadius = (d: GraphSimulationNode) => Math.min(32, Math.sqrt((d.word_count || 100) / 10) + 8)
+
+    // Create simulation with tuned forces to reduce jitter/overlap
+    const simulation = forceSimulation<GraphSimulationNode>(simulationNodes)
+      .force('link', forceLink<GraphSimulationNode, GraphSimulationLink>(validConnections)
+        .id((d: GraphSimulationNode) => d.id)
+        .distance(120)
+        .strength(0.6))
+      .force('charge', forceManyBody().strength(-260))
+      .force('center', forceCenter((width - margin.left - margin.right) / 2, (height - margin.top - margin.bottom) / 2))
+      .force('collision', forceCollide<GraphSimulationNode>().radius((d: GraphSimulationNode) => nodeRadius(d) + 6).iterations(2))
+      .alpha(1)
+      .alphaDecay(0.06)
+      .velocityDecay(0.5)
 
     // Create links
     const links = g.append('g')
@@ -132,7 +144,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .enter()
       .append('line')
       .attr('stroke', '#e5e7eb')
-      .attr('stroke-width', (d) => Math.sqrt(d.similarity * 5))
+      .attr('stroke-width', (d: GraphSimulationLink) => Math.sqrt(d.similarity * 5))
       .attr('stroke-opacity', 0.6)
 
     // Create nodes
@@ -141,29 +153,29 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .data(simulationNodes)
       .enter()
       .append('circle')
-      .attr('r', (d) => Math.sqrt((d.word_count || 100) / 10) + 8)
+      .attr('r', (d: GraphSimulationNode) => nodeRadius(d))
       .attr('fill', '#f97316')
       .attr('stroke', '#ea580c')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
-      .call(d3.drag<SVGCircleElement, SimulationNode>()
-        .on('start', (event, d) => {
+      .call(drag<SVGCircleElement, GraphSimulationNode>()
+        .on('start', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           if (!event.active) simulation.alphaTarget(0.3).restart()
           d.fx = d.x
           d.fy = d.y
         })
-        .on('drag', (event, d) => {
+        .on('drag', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           d.fx = event.x
           d.fy = event.y
         })
-        .on('end', (event, d) => {
+        .on('end', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           if (!event.active) simulation.alphaTarget(0)
           d.fx = null
           d.fy = null
         }))
 
     // Add click handler to nodes
-    nodes.on('click', (event, d) => {
+    nodes.on('click', (_event: MouseEvent, d: GraphSimulationNode) => {
       onNodeClick(d.id)
     })
 
@@ -173,7 +185,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .data(simulationNodes)
       .enter()
       .append('text')
-      .text((d) => (d.title || 'Untitled').length > 20 ? (d.title || 'Untitled').substring(0, 20) + '...' : (d.title || 'Untitled'))
+      .text((d: GraphSimulationNode) => (d.title || 'Untitled').length > 20 ? (d.title || 'Untitled').substring(0, 20) + '...' : (d.title || 'Untitled'))
       .attr('font-size', '12px')
       .attr('font-family', 'system-ui, sans-serif')
       .attr('fill', '#374151')
@@ -181,8 +193,9 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('dy', '0.35em')
       .style('pointer-events', 'none')
 
-    // Add tooltips
-    const tooltip = d3.select('body').append('div')
+    // Add tooltips (clean any existing first)
+    select('body').selectAll('div.tooltip').remove()
+    const tooltip = select('body').append('div')
       .attr('class', 'tooltip')
       .style('position', 'absolute')
       .style('visibility', 'hidden')
@@ -195,7 +208,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .style('z-index', '1000')
 
     nodes
-      .on('mouseover', (event, d) => {
+      .on('mouseover', (_event: MouseEvent, d: GraphSimulationNode) => {
         tooltip.style('visibility', 'visible')
           .html(`
             <strong>${d.title || 'Untitled'}</strong><br/>
@@ -203,7 +216,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
             <em>${d.word_count || 0} words</em>
           `)
       })
-      .on('mousemove', (event) => {
+      .on('mousemove', (event: MouseEvent) => {
         tooltip.style('top', (event.pageY - 10) + 'px')
           .style('left', (event.pageX + 10) + 'px')
       })
@@ -214,26 +227,49 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     // Update positions on simulation tick
     simulation.on('tick', () => {
       links
-        .attr('x1', (d: SimulationLink) => d.source.x || 0)
-        .attr('y1', (d: SimulationLink) => d.source.y || 0)
-        .attr('x2', (d: SimulationLink) => d.target.x || 0)
-        .attr('y2', (d: SimulationLink) => d.target.y || 0)
+        .attr('x1', (d: GraphSimulationLink) => d.source.x || 0)
+        .attr('y1', (d: GraphSimulationLink) => d.source.y || 0)
+        .attr('x2', (d: GraphSimulationLink) => d.target.x || 0)
+        .attr('y2', (d: GraphSimulationLink) => d.target.y || 0)
 
       nodes
-        .attr('cx', (d: SimulationNode) => d.x || 0)
-        .attr('cy', (d: SimulationNode) => d.y || 0)
+        .attr('cx', (d: GraphSimulationNode) => d.x || 0)
+        .attr('cy', (d: GraphSimulationNode) => d.y || 0)
 
       labels
-        .attr('x', (d: SimulationNode) => d.x || 0)
-        .attr('y', (d: SimulationNode) => (d.y || 0) + 25)
+        .attr('x', (d: GraphSimulationNode) => d.x || 0)
+        .attr('y', (d: GraphSimulationNode) => (d.y || 0) + nodeRadius(d) + 13)
     })
+
+    // Stop simulation when stabilized to reduce jitter
+    simulation.on('end', () => {
+      simulation.alphaTarget(0)
+    })
+
+    // Zoom & pan
+    const zoomBehavior = zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 4])
+      .on('zoom', (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
+        rootG.attr('transform', event.transform.toString())
+      })
+
+    svg.call(zoomBehavior)
 
     // Cleanup function
     return () => {
       tooltip.remove()
       simulation.stop()
+      svg.on('.zoom', null)
     }
-  }
+  }, [graphData, onNodeClick])
+
+  useEffect(() => {
+    if (!graphData || !svgRef.current) return
+    const cleanup = renderGraph()
+    return () => {
+      if (typeof cleanup === 'function') cleanup()
+    }
+  }, [graphData, renderGraph])
 
   if (loading) {
     return (

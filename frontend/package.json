@@ -31,6 +31,13 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/d3-drag": "^3.0.7",
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-selection": "^3.0.11",
+    "@types/d3-zoom": "^3.0.8",
+    "@types/estree": "^1.0.8",
+    "@types/geojson": "^7946.0.16",
+    "@types/json-schema": "^7.0.15",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

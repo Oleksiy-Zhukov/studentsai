@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { api, type Flashcard, type Note } from '@/lib/api'
@@ -19,11 +19,7 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    loadFlashcards()
-  }, [note.id])
-
-  const loadFlashcards = async () => {
+  const loadFlashcards = useCallback(async () => {
     try {
       setLoading(true)
       const cards = await api.getNoteFlashcards(note.id)
@@ -35,7 +31,13 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [note.id])
+
+  useEffect(() => {
+    loadFlashcards()
+  }, [loadFlashcards])
+
+  
 
   const generateFlashcards = async () => {
     try {

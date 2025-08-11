@@ -8,9 +8,9 @@ import { NotesList } from '@/components/notes/NotesList'
 import { FlashcardViewer } from '@/components/flashcards/FlashcardViewer'
 import { NotesGraph } from '@/components/graph/NotesGraph'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { api, type Note, type User } from '@/lib/api'
-import { Plus, FileText, Zap, Network, Search, Settings, FolderOpen } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { api, type Note, type User, APIError } from '@/lib/api'
+import { Plus, FileText, Zap, Network, Search, FolderOpen } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 
@@ -48,10 +48,10 @@ export default function Home() {
     try {
       const response = await api.getNotes()
       setNotes(response.notes)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load notes:', err)
       // If it's an auth error, clear the token and redirect to login
-      if (err.status === 401 || err.message?.includes('credentials')) {
+      if (err instanceof APIError && (err.status === 401 || err.message?.includes('credentials'))) {
         localStorage.removeItem('authToken')
         localStorage.removeItem('user')
         setUser(null)
