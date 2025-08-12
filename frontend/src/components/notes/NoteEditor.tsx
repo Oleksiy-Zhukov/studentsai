@@ -150,6 +150,25 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
+                onPaste={async (e) => {
+                  if (!e.clipboardData) return
+                  const item = Array.from(e.clipboardData.items).find(it => it.type.startsWith('image/'))
+                  if (!item) return
+                  e.preventDefault()
+                  const file = item.getAsFile()
+                  if (!file) return
+                  try {
+                    const { url } = await api.uploadImage(file)
+                    const md = `\n\n![](${url})\n\n`
+                    const target = e.target as HTMLTextAreaElement
+                    const start = target.selectionStart || content.length
+                    const end = target.selectionEnd || content.length
+                    const next = content.slice(0, start) + md + content.slice(end)
+                    setContent(next)
+                  } catch {
+                    setError('Image upload failed')
+                  }
+                }}
                 placeholder="Start writing your notes here..."
                 className="flex-1 resize-none border-0 focus:ring-0 text-gray-700 leading-relaxed"
               />
@@ -221,6 +240,10 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                         return <a className="text-orange-600 underline" href={href} {...props}>{children}</a>
                       },
                       p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                      img: (props) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200" />
+                      ),
                     }}
                   >
                     {transformWikiLinksToMarkdown(content)}

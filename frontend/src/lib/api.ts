@@ -1,4 +1,16 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const normalizeBaseUrl = (url: string): string => {
+  try {
+    const u = new URL(url)
+    if (u.hostname === 'localhost') {
+      u.hostname = '127.0.0.1'
+    }
+    return u.toString().replace(/\/$/, '')
+  } catch {
+    return url
+  }
+}
+
+const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000')
 
 export interface User {
   id: string
@@ -85,13 +97,13 @@ class APIClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    const headers = new Headers({ 'Content-Type': 'application/json' })
+    if (options.headers) {
+      const incoming = new Headers(options.headers as HeadersInit)
+      incoming.forEach((value, key) => headers.set(key, value))
     }
-
     if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
+      headers.set('Authorization', `Bearer ${this.token}`)
     }
 
     const response = await fetch(url, {
@@ -108,6 +120,24 @@ class APIClient {
     }
 
     return response.json()
+  }
+
+  // Upload image (multipart)
+  async uploadImage(file: File): Promise<{ url: string; filename: string; content_type: string }> {
+    const form = new FormData()
+    form.append('file', file)
+    const headers: Headers = new Headers()
+    if (this.token) headers.set('Authorization', `Bearer ${this.token}`)
+    const resp = await fetch(`${this.baseURL}/upload/image`, {
+      method: 'POST',
+      headers,
+      body: form,
+    })
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({} as unknown))
+      throw new APIError(resp.status, errorData.detail || 'Upload failed')
+    }
+    return resp.json()
   }
 
   // Auth endpoints

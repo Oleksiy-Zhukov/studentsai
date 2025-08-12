@@ -139,30 +139,34 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
         </div>
       </div>
 
-      <Card className="mb-6 min-h-[300px]">
-        <CardContent className="p-8">
-          <div className="text-center">
-            <div className="mb-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Question</h3>
-              <p className="text-gray-700 text-lg leading-relaxed">
-                {currentCard.question}
-              </p>
+      <Card className="mb-6 h-[420px] md:h-[480px]">
+        <CardContent className="p-0 h-full">
+          <div className="flex flex-col h-full">
+            {/* Content area with fixed height and internal scroll to prevent layout shift */}
+            <div className="relative flex-1">
+              {/* Question view */}
+              <div className={`absolute inset-0 overflow-auto p-8 ${showAnswer ? 'hidden' : 'block'}`}>
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Question</h3>
+                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+                    {currentCard.question}
+                  </p>
+                </div>
+              </div>
+              {/* Answer view */}
+              <div className={`absolute inset-0 overflow-auto p-8 ${showAnswer ? 'block' : 'hidden'}`}>
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Answer</h3>
+                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+                    {currentCard.answer}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {showAnswer && (
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Answer</h3>
-                <p className="text-gray-700 text-lg leading-relaxed">
-                  {currentCard.answer}
-                </p>
-              </div>
-            )}
-
-            <div className="mt-8">
-              <Button
-                onClick={toggleAnswer}
-                className="flex items-center space-x-2"
-              >
+            {/* Actions pinned under content to keep height consistent */}
+            <div className="border-t p-4 flex items-center justify-center">
+              <Button onClick={toggleAnswer} className="flex items-center space-x-2">
                 {showAnswer ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span>{showAnswer ? 'Hide Answer' : 'Show Answer'}</span>
               </Button>

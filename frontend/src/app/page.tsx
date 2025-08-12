@@ -96,13 +96,13 @@ export default function Home() {
   const handleSaveNote = (note: Note) => {
     if (selectedNote) {
       // Update existing note
-      setNotes(notes.map(n => n.id === note.id ? note : n))
+      setNotes(notes.map(n => (n.id === note.id ? note : n)))
     } else {
       // Add new note
       setNotes([note, ...notes])
     }
+    setSelectedNote(note)
     setCurrentView('notes')
-    setSelectedNote(null)
   }
 
   const handleDeleteNote = async (noteId: string) => {
@@ -239,7 +239,7 @@ export default function Home() {
       <Header user={user} onLogout={handleLogout} />
       
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Sidebar - File Explorer */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
           {/* Search Bar */}
@@ -282,7 +282,7 @@ export default function Home() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0">
           {currentView === 'editor' ? (
             <NoteEditor
               note={selectedNote || undefined}
@@ -296,7 +296,7 @@ export default function Home() {
               onClose={() => setCurrentView('notes')}
             />
           ) : (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
               {/* Top Toolbar */}
               <div className="bg-white border-b border-gray-200 px-6 py-3">
                 <div className="flex items-center justify-between">
@@ -339,12 +339,12 @@ export default function Home() {
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden min-h-0">
                 {currentView === 'notes' && (
                   selectedNote ? (
-                    <div className="h-full flex">
+                    <div className="h-full flex min-h-0">
                       {/* Note Content */}
-                      <div className="flex-1 p-6 overflow-y-auto">
+                      <div className="flex-1 p-6 overflow-y-auto min-h-0">
                         <div className="max-w-4xl mx-auto">
                           <h1 className="text-3xl font-bold text-gray-900 mb-4">{selectedNote.title}</h1>
                           
@@ -356,7 +356,7 @@ export default function Home() {
                           )}
                           
                           <div className="prose prose-orange max-w-none">
-                            <div className="text-gray-700 leading-relaxed overflow-y-auto pb-24">
+                            <div className="text-gray-700 leading-relaxed pb-24">
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -393,6 +393,10 @@ export default function Home() {
                                     )
                                   },
                                   p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                                  img: (props) => (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200" />
+                                  ),
                                 }}
                               >
                                 {transformWikiLinksToMarkdown(selectedNote.content)}
