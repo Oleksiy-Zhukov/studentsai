@@ -10,6 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
+
+/backend/uploads/
+
 # testing
 /coverage
 
