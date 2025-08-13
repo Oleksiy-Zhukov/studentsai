@@ -127,6 +127,20 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('preserveAspectRatio', 'xMidYMid meet')
 
     // Layers: zoom/pan on rootG, chart elements inside chartG with margins
+    const defs = svg.append('defs')
+    const glow = defs.append('filter')
+      .attr('id', 'link-glow')
+      .attr('height', '200%')
+      .attr('width', '200%')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+    glow.append('feGaussianBlur')
+      .attr('stdDeviation', 2)
+      .attr('result', 'coloredBlur')
+    const feMerge = glow.append('feMerge')
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur')
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
+
     const rootG = svg.append('g').attr('class', 'zoom-layer')
     const g = rootG.append('g')
       .attr('class', 'chart-layer')
@@ -151,15 +165,23 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .alphaDecay(0.06)
       .velocityDecay(0.5)
 
+    // Link color by type for better visibility
+    const linkColor = (d: GraphSimulationLink) => {
+      if (d.connection_type && d.connection_type.toLowerCase().includes('backlink')) return '#fb923c' // orange-400
+      if (d.connection_type && d.connection_type.toLowerCase().includes('keyword')) return '#60a5fa' // blue-400
+      return '#94a3b8' // slate-400 fallback
+    }
+
     // Create links
     const links = g.append('g')
       .selectAll('line')
       .data(validConnections)
       .enter()
       .append('line')
-      .attr('stroke', '#e5e7eb')
-      .attr('stroke-width', (d: GraphSimulationLink) => Math.sqrt(d.similarity * 5))
-      .attr('stroke-opacity', 0.6)
+      .attr('stroke', (d: GraphSimulationLink) => linkColor(d))
+      .attr('stroke-width', (d: GraphSimulationLink) => 1 + d.similarity * 2)
+      .attr('stroke-opacity', 0.85)
+      .style('filter', 'url(#link-glow)')
 
     // Create nodes
     const nodes = g.append('g')
@@ -215,6 +237,9 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('font-size', '12px')
       .attr('font-family', 'system-ui, sans-serif')
       .attr('fill', '#374151')
+      .attr('stroke', '#ffffff')
+      .attr('stroke-width', 3)
+      .style('paint-order', 'stroke')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
       .style('pointer-events', 'none')
@@ -245,12 +270,40 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       tooltip.style('visibility', 'hidden')
     }
 
+    // Precompute neighbors for highlighting
+    const neighborMap = new Map<string, Set<string>>()
+    validConnections.forEach((l) => {
+      const s = String(l.source.id)
+      const t = String(l.target.id)
+      if (!neighborMap.has(s)) neighborMap.set(s, new Set<string>())
+      if (!neighborMap.has(t)) neighborMap.set(t, new Set<string>())
+      neighborMap.get(s)!.add(t)
+      neighborMap.get(t)!.add(s)
+    })
+
+    const dimRest = (id: string) => {
+      nodes.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0.25))
+      labels.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0.25))
+      links
+        .attr('stroke-opacity', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 1 : 0.15))
+        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 2.5 + l.similarity * 2 : 1 + l.similarity * 1.5))
+    }
+
+    const clearDim = () => {
+      nodes.style('opacity', 1)
+      labels.style('opacity', 1)
+      links
+        .attr('stroke-opacity', 0.85)
+        .attr('stroke-width', (d: GraphSimulationLink) => 1 + d.similarity * 2)
+    }
+
     nodes
       .on('mouseover', (_event: MouseEvent, d: GraphSimulationNode) => {
         if (isDraggingRef.current) return
         if (hoverTimeout) clearTimeout(hoverTimeout)
         hoverTimeout = setTimeout(() => {
           if (isDraggingRef.current) return
+          dimRest(String(d.id))
           showTooltip(`
             <strong>${d.title || 'Untitled'}</strong><br/>
             ${d.content_preview || 'No preview available'}<br/>
@@ -266,6 +319,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       })
       .on('mouseout', () => {
         hideTooltip()
+        clearDim()
       })
 
     // Update positions on simulation tick

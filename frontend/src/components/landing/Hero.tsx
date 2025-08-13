@@ -42,8 +42,8 @@ export function Hero({
 							<Link href="/auth">
 								<Button className="bg-orange-500 hover:bg-orange-600 focus-visible:ring-orange-500 h-11 px-6 text-base">Start Free</Button>
 							</Link>
-							<Link href="/">
-								<Button variant="outline" className="h-11 px-6 text-base dark:border-[#232a36]">Open App</Button>
+							<Link href="#features">
+								<Button variant="outline" className="h-11 px-6 text-base dark:border-[#232a36]">Explore Features</Button>
 							</Link>
 						</div>
 					</div>

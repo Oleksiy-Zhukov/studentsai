@@ -33,6 +33,7 @@ export default function LandingPage() {
 
       {/* SECTION A: Graph screenshot with alternate typography and keyline */}
       <Section
+        id="features"
         variant="alt"
         label="DISCOVER CONNECTIONS"
         title="See how your ideas connect"
@@ -60,7 +61,7 @@ export default function LandingPage() {
         />
       </Section>
 
-      <FinalCta title="Start free. Build your brain." subtext="All core features included. Just limited API calls on the free plan." />
+      <FinalCta title="Explore plans and options" subtext="Free includes all core features. Upgrade for higher AI quotas and priority speed." buttonLabel="More options" buttonHref="/auth" />
 
       <SiteFooter />
     </main>

@@ -14,11 +14,12 @@ interface SectionProps {
 	children?: ReactNode
 	variant?: 'default' | 'alt'
 	className?: string
+  id?: string
 }
 
-export function Section({ label, title, body, children, variant = 'default', className = '' }: SectionProps) {
+export function Section({ label, title, body, children, variant = 'default', className = '', id }: SectionProps) {
 	return (
-		<section className={`mx-auto max-w-7xl px-6 py-16 ${className}`} data-reveal>
+		<section id={id} className={`mx-auto max-w-7xl px-6 py-16 ${className}`} data-reveal>
 			<div className={variant === 'alt' ? 'grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start' : 'grid gap-10 md:grid-cols-2 items-start'}>
 				<div>
 					{label && (

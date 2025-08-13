@@ -5,7 +5,7 @@ import { Heart, Github, ExternalLink, Linkedin, Coffee, User } from 'lucide-reac
 export function SiteFooter() {
   return (
     <footer className="bg-gray-50 border-t mt-16 dark:bg-gray-950 dark:border-gray-800">
-      <div className="mx-auto max-w-6xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="grid gap-8 md:grid-cols-4">
           {/* Project Info */}
           <div className="space-y-4">
@@ -26,19 +26,19 @@ export function SiteFooter() {
             <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
               <li className="flex items-center space-x-2">
                 <div className="w-1 h-1 bg-orange-600 rounded-full" />
-                <span>AI-powered content summarization</span>
+                <span>Markdown notes with backlinks</span>
               </li>
               <li className="flex items-center space-x-2">
                 <div className="w-1 h-1 bg-orange-600 rounded-full" />
-                <span>Intelligent question generation</span>
+                <span>Knowledge graph visualization</span>
               </li>
               <li className="flex items-center space-x-2">
                 <div className="w-1 h-1 bg-orange-600 rounded-full" />
-                <span>Personalized study planning</span>
+                <span>Flashcards & spaced practice</span>
               </li>
               <li className="flex items-center space-x-2">
                 <div className="w-1 h-1 bg-orange-600 rounded-full" />
-                <span>Dual AI backend support</span>
+                <span>AI summaries & keyword suggestions</span>
               </li>
             </ul>
           </div>
@@ -55,8 +55,7 @@ export function SiteFooter() {
               </div>
               <div className="space-y-1">
                 <div>FastAPI</div>
-                <div>OpenAI API</div>
-                <div>HuggingFace</div>
+                <div>OpenAI API (dev)</div>
                 <div>Python</div>
               </div>
             </div>
