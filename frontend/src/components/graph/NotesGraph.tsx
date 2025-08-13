@@ -126,6 +126,10 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('viewBox', `0 0 ${width} ${height}`)
       .attr('preserveAspectRatio', 'xMidYMid meet')
 
+    // Theme-aware styling
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+    const linkBase = isDark ? '#cbd5e1' : '#94a3b8' // slate-300 on dark, slate-400 on light
+
     // Layers: zoom/pan on rootG, chart elements inside chartG with margins
     const defs = svg.append('defs')
     const glow = defs.append('filter')
@@ -135,11 +139,24 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('x', '-50%')
       .attr('y', '-50%')
     glow.append('feGaussianBlur')
-      .attr('stdDeviation', 2)
+      .attr('stdDeviation', isDark ? 2.5 : 2)
       .attr('result', 'coloredBlur')
     const feMerge = glow.append('feMerge')
     feMerge.append('feMergeNode').attr('in', 'coloredBlur')
     feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
+
+    const nodeShadow = defs.append('filter')
+      .attr('id', 'node-shadow')
+      .attr('height', '200%')
+      .attr('width', '200%')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+    nodeShadow.append('feDropShadow')
+      .attr('dx', 0)
+      .attr('dy', 1)
+      .attr('stdDeviation', 2)
+      .attr('flood-color', isDark ? '#000000' : '#94a3b8')
+      .attr('flood-opacity', isDark ? 0.6 : 0.3)
 
     const rootG = svg.append('g').attr('class', 'zoom-layer')
     const g = rootG.append('g')
@@ -150,14 +167,14 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     const nodeRadius = (d: GraphSimulationNode) => Math.min(32, Math.sqrt((d.word_count || 100) / 10) + 8)
 
     // Forces
-    const chargeForce = forceManyBody().strength(-260)
+    const chargeForce = forceManyBody().strength(-240)
 
     // Create simulation with tuned forces to reduce jitter/overlap
     const simulation = forceSimulation<GraphSimulationNode>(simulationNodes)
       .force('link', forceLink<GraphSimulationNode, GraphSimulationLink>(validConnections)
         .id((d: GraphSimulationNode) => d.id)
-        .distance(120)
-        .strength(0.6))
+        .distance(150)
+        .strength(0.5))
       .force('charge', chargeForce)
       .force('center', forceCenter((width - margin.left - margin.right) / 2, (height - margin.top - margin.bottom) / 2))
       .force('collision', forceCollide<GraphSimulationNode>().radius((d: GraphSimulationNode) => nodeRadius(d) + 6).iterations(2))
@@ -165,22 +182,26 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .alphaDecay(0.06)
       .velocityDecay(0.5)
 
-    // Link color by type for better visibility
-    const linkColor = (d: GraphSimulationLink) => {
-      if (d.connection_type && d.connection_type.toLowerCase().includes('backlink')) return '#fb923c' // orange-400
-      if (d.connection_type && d.connection_type.toLowerCase().includes('keyword')) return '#60a5fa' // blue-400
-      return '#94a3b8' // slate-400 fallback
-    }
+    // Create link halo underlay for visibility
+    const linksHalo = g.append('g')
+      .selectAll('line')
+      .data(validConnections)
+      .enter()
+      .append('line')
+      .attr('stroke', linkBase)
+      .attr('stroke-width', (d: GraphSimulationLink) => 2 + d.similarity * 3)
+      .attr('stroke-opacity', isDark ? 0.35 : 0.25)
+      .style('filter', 'url(#link-glow)')
 
-    // Create links
+    // Create links (main stroke)
     const links = g.append('g')
       .selectAll('line')
       .data(validConnections)
       .enter()
       .append('line')
-      .attr('stroke', (d: GraphSimulationLink) => linkColor(d))
-      .attr('stroke-width', (d: GraphSimulationLink) => 1 + d.similarity * 2)
-      .attr('stroke-opacity', 0.85)
+      .attr('stroke', linkBase)
+      .attr('stroke-width', (d: GraphSimulationLink) => 1.25 + d.similarity * 2.5)
+      .attr('stroke-opacity', isDark ? 0.9 : 0.85)
       .style('filter', 'url(#link-glow)')
 
     // Create nodes
@@ -194,6 +215,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('stroke', '#ea580c')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
+      .style('filter', 'url(#node-shadow)')
       .call(drag<SVGCircleElement, GraphSimulationNode>()
         .on('start', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           if (!event.active) simulation.alphaTarget(0.3).restart()
@@ -238,7 +260,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('font-family', 'system-ui, sans-serif')
       .attr('fill', '#374151')
       .attr('stroke', '#ffffff')
-      .attr('stroke-width', 3)
+      .attr('stroke-width', 2)
       .style('paint-order', 'stroke')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
@@ -286,15 +308,21 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       labels.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0.25))
       links
         .attr('stroke-opacity', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 1 : 0.15))
-        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 2.5 + l.similarity * 2 : 1 + l.similarity * 1.5))
+        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 3 + l.similarity * 2.8 : 1.25 + l.similarity * 2))
+      linksHalo
+        .attr('stroke-opacity', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? (isDark ? 0.5 : 0.4) : (isDark ? 0.15 : 0.1)))
+        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 3 + l.similarity * 3.5 : 2 + l.similarity * 3))
     }
 
     const clearDim = () => {
       nodes.style('opacity', 1)
       labels.style('opacity', 1)
       links
-        .attr('stroke-opacity', 0.85)
-        .attr('stroke-width', (d: GraphSimulationLink) => 1 + d.similarity * 2)
+        .attr('stroke-opacity', isDark ? 0.9 : 0.85)
+        .attr('stroke-width', (d: GraphSimulationLink) => 1.25 + d.similarity * 2.5)
+      linksHalo
+        .attr('stroke-opacity', isDark ? 0.35 : 0.25)
+        .attr('stroke-width', (d: GraphSimulationLink) => 2 + d.similarity * 3)
     }
 
     nodes
@@ -325,6 +353,11 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     // Update positions on simulation tick
     simulation.on('tick', () => {
       links
+        .attr('x1', (d: GraphSimulationLink) => d.source.x || 0)
+        .attr('y1', (d: GraphSimulationLink) => d.source.y || 0)
+        .attr('x2', (d: GraphSimulationLink) => d.target.x || 0)
+        .attr('y2', (d: GraphSimulationLink) => d.target.y || 0)
+      linksHalo
         .attr('x1', (d: GraphSimulationLink) => d.source.x || 0)
         .attr('y1', (d: GraphSimulationLink) => d.source.y || 0)
         .attr('x2', (d: GraphSimulationLink) => d.target.x || 0)
