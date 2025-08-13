@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AuthForm } from '@/components/auth/AuthForm'
 import { Header } from '@/components/layout/Header'
 import { NoteEditor } from '@/components/notes/NoteEditor'
 import { NotesList } from '@/components/notes/NotesList'
@@ -33,7 +32,7 @@ export default function Home() {
     // Check for existing auth
     const token = localStorage.getItem('authToken')
     const userData = localStorage.getItem('user')
-    
+
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData)
@@ -44,6 +43,10 @@ export default function Home() {
         // Invalid stored data, clear it
         localStorage.removeItem('authToken')
         localStorage.removeItem('user')
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        window.location.replace('/landing')
       }
     }
     setLoading(false)
@@ -229,37 +232,35 @@ export default function Home() {
     )
   }
 
-  if (!user) {
-    return <AuthForm onSuccess={handleAuthSuccess} />
-  }
+  if (!user) return null
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f1115]">
       {/* Top Header */}
       <Header user={user} onLogout={handleLogout} />
       
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Sidebar - File Explorer */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col dark:bg-[#141820] dark:border-[#232a36]">
           {/* Search Bar */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-gray-200 dark:border-[#232a36]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-50 border-gray-200"
+                className="pl-10 bg-gray-50 border-gray-200 dark:bg-[#0f1115] dark:border-[#232a36] dark:text-gray-100"
               />
             </div>
           </div>
 
           {/* File Explorer Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#232a36]">
             <div className="flex items-center space-x-2">
-              <FolderOpen className="h-4 w-4 text-gray-600" />
-              <span className="font-medium text-gray-900">Notes</span>
+              <FolderOpen className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Notes</span>
             </div>
             <Button
               size="sm"
@@ -298,11 +299,11 @@ export default function Home() {
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
               {/* Top Toolbar */}
-              <div className="bg-white border-b border-gray-200 px-6 py-3">
+              <div className="bg-white border-b border-gray-200 px-6 py-3 dark:bg-[#141820] dark:border-[#232a36]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as View)}>
-                      <TabsList className="bg-gray-100">
+                      <TabsList className="bg-gray-100 dark:bg-[#0f1115] dark:border dark:border-[#232a36]">
                         <TabsTrigger value="notes" className="flex items-center space-x-2">
                           <FileText className="h-4 w-4" />
                           <span>Notes</span>
@@ -346,17 +347,17 @@ export default function Home() {
                       {/* Note Content */}
                       <div className="flex-1 p-6 overflow-y-auto min-h-0">
                         <div className="max-w-4xl mx-auto">
-                          <h1 className="text-3xl font-bold text-gray-900 mb-4">{selectedNote.title}</h1>
+                          <h1 className="text-3xl font-bold text-gray-900 mb-4 dark:text-gray-100">{selectedNote.title}</h1>
                           
                           {selectedNote.summary && (
-                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                              <h4 className="font-medium text-orange-900 mb-2">AI Summary</h4>
-                              <p className="text-orange-800">{selectedNote.summary}</p>
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 dark:bg-orange-950/30 dark:border-orange-900/40">
+                              <h4 className="font-medium text-orange-900 mb-2 dark:text-orange-300">AI Summary</h4>
+                              <p className="text-orange-800 dark:text-orange-200">{selectedNote.summary}</p>
                             </div>
                           )}
                           
-                          <div className="prose prose-orange max-w-none">
-                            <div className="text-gray-700 leading-relaxed pb-24">
+                          <div className="prose prose-orange max-w-none dark:prose-invert">
+                            <div className="text-gray-700 leading-relaxed pb-24 dark:text-gray-200">
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -366,7 +367,7 @@ export default function Home() {
                                       return (
                                         <a
                                           href={href}
-                                          className="text-orange-600 underline"
+                                          className="text-orange-600 underline dark:text-orange-400"
                                           onClick={(e) => {
                                             e.preventDefault()
                                             if (typeof window !== 'undefined') {
@@ -385,7 +386,7 @@ export default function Home() {
                                         href={href}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-orange-600 underline"
+                                        className="text-orange-600 underline dark:text-orange-400"
                                         {...props}
                                       >
                                         {children}
@@ -395,7 +396,7 @@ export default function Home() {
                                   p: ({ children }) => <p className="leading-relaxed">{children}</p>,
                                   img: (props) => (
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200" />
+                                    <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200 dark:border-[#232a36]" />
                                   ),
                                 }}
                               >
@@ -407,12 +408,12 @@ export default function Home() {
                       </div>
 
                       {/* Right Sidebar - Backlinks & Metadata */}
-                      <div className="w-80 bg-gray-50 border-l border-gray-200 p-4">
+                      <div className="w-80 bg-gray-50 border-l border-gray-200 p-4 dark:bg-[#141820] dark:border-[#232a36]">
                         <div className="space-y-6">
                           {/* Metadata */}
                           <div>
-                            <h3 className="font-medium text-gray-900 mb-2">Note Info</h3>
-                            <div className="space-y-2 text-sm text-gray-600">
+                            <h3 className="font-medium text-gray-900 mb-2 dark:text-gray-100">Note Info</h3>
+                            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                               <div>Created: {new Date(selectedNote.created_at).toLocaleDateString()}</div>
                               <div>Updated: {new Date(selectedNote.updated_at).toLocaleDateString()}</div>
                               <div>Words: {selectedNote.content.split(' ').length}</div>
@@ -423,9 +424,9 @@ export default function Home() {
 
                           {/* Backlinks */}
                           <div>
-                            <h3 className="font-medium text-gray-900 mb-2">Backlinks</h3>
+                            <h3 className="font-medium text-gray-900 mb-2 dark:text-gray-100">Backlinks</h3>
                             {backlinks.length === 0 ? (
-                              <p className="text-sm text-gray-500">No backlinks found</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">No backlinks found</p>
                             ) : (
                               <div className="space-y-2">
                                 {backlinks.map((b) => (
@@ -438,11 +439,11 @@ export default function Home() {
                                         setSelectedNote(target)
                                       }
                                     }}
-                                    className="w-full text-left text-sm p-2 rounded hover:bg-gray-100"
+                                    className="w-full text-left text-sm p-2 rounded hover:bg-gray-100 dark:hover:bg-[#0f1115]"
                                   >
-                                    <div className="font-medium text-gray-900 truncate">{b.title}</div>
+                                    <div className="font-medium text-gray-900 truncate dark:text-gray-100">{b.title}</div>
                                     {b.excerpt && (
-                                      <div className="text-gray-500 truncate">{b.excerpt}</div>
+                                      <div className="text-gray-500 truncate dark:text-gray-400">{b.excerpt}</div>
                                     )}
                                   </button>
                                 ))}
@@ -454,18 +455,18 @@ export default function Home() {
 
                           {/* Tags and suggested keywords */}
                           <div>
-                            <h3 className="font-medium text-gray-900 mb-2">Tags</h3>
+                            <h3 className="font-medium text-gray-900 mb-2 dark:text-gray-100">Tags</h3>
                             <div className="flex flex-wrap gap-2 mb-3">
                               {(selectedNote.tags || []).length === 0 ? (
-                                <p className="text-sm text-gray-500">No tags</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">No tags</p>
                               ) : (
                                 (selectedNote.tags || []).map((t) => (
-                                  <span key={t} className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded text-xs">
+                                  <span key={t} className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded text-xs dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900/40">
                                     {t}
                                     <button
                                       type="button"
                                       title="Remove tag"
-                                      className="text-orange-700 hover:text-orange-900"
+                                      className="text-orange-700 hover:text-orange-900 dark:text-orange-300 dark:hover:text-orange-200"
                                       onClick={() => removeTag(t)}
                                       disabled={tagsSaving}
                                     >
@@ -476,9 +477,9 @@ export default function Home() {
                               )}
                             </div>
                             <div>
-                              <div className="text-xs text-gray-500 mb-1">Suggested</div>
+                              <div className="text-xs text-gray-500 mb-1 dark:text-gray-400">Suggested</div>
                               {suggestedKeywords.length === 0 ? (
-                                <p className="text-sm text-gray-500">No suggestions</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">No suggestions</p>
                               ) : (
                                 <div className="flex flex-wrap gap-2">
                                   {suggestedKeywords.map((k) => (
@@ -487,7 +488,7 @@ export default function Home() {
                                       type="button"
                                       onClick={() => addTag(k)}
                                       disabled={tagsSaving}
-                                      className="text-xs px-2 py-0.5 border border-gray-200 rounded hover:bg-gray-100"
+                                      className="text-xs px-2 py-0.5 border border-gray-200 rounded hover:bg-gray-100 dark:border-[#232a36] dark:hover:bg-[#0f1115] dark:text-gray-100"
                                       title="Add tag"
                                     >
                                       + {k}

@@ -4,51 +4,65 @@
  */
 'use client'
 
+import { PublicHeader } from '@/components/landing/PublicHeader'
 import { Hero } from '@/components/landing/Hero'
-import { FeatureCard } from '@/components/landing/FeatureCard'
-import { FileText, Network, Layers } from 'lucide-react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { Section } from '@/components/landing/Section'
+import { MediaFrame } from '@/components/landing/MediaFrame'
+import { TwoUp } from '@/components/landing/TwoUp'
+import { FinalCta } from '@/components/landing/FinalCta'
+import { SiteFooter } from '@/components/landing/SiteFooter'
+import { FileText } from 'lucide-react'
+import { useEffect } from 'react'
+import { api } from '@/lib/api'
+import { useRevealOnScroll } from '@/components/landing/useReveal'
 
 export default function LandingPage() {
+  // If user already logged in, route them to notes
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
+    if (token) {
+      // naive check; main page will fully validate
+      window.location.replace('/')
+    }
+  }, [])
+  useRevealOnScroll()
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 dark:bg-[#0f1115]" id="main">
+      <PublicHeader />
       <Hero />
 
-      <section className="mx-auto max-w-5xl px-6 pb-8">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <FeatureCard
-            title="Notes & Backlinks"
-            description="Write clean Markdown and connect ideas with [[wiki]] links. Backlinks reveal context across notes."
-            icon={<FileText className="h-4 w-4" />}
-          />
-          <FeatureCard
-            title="Flashcards"
-            description="Generate and review flashcards with a steady rhythm. Stable card size keeps focus on content."
-            icon={<Layers className="h-4 w-4" />}
-          />
-          <FeatureCard
-            title="Graph View"
-            description="Explore relationships with a tidy, responsive graph. Zoom, drag, and discover connections."
-            icon={<Network className="h-4 w-4" />}
-          />
-        </div>
-      </section>
-
-      <footer className="mx-auto max-w-5xl px-6 py-16">
-        <div className="rounded-md border border-gray-200 bg-white p-6 text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Start in seconds</h2>
-          <p className="mt-2 text-gray-600">Capture a thought, link a note, and see the shape of your study.</p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link href="/">
-              <Button className="bg-orange-500 hover:bg-orange-600 focus-visible:ring-orange-500">Start Free</Button>
-            </Link>
-            <Link href="/">
-              <Button variant="outline">Open Notes</Button>
-            </Link>
+      {/* SECTION A: Graph screenshot with alternate typography and keyline */}
+      <Section
+        variant="alt"
+        label="DISCOVER CONNECTIONS"
+        title="See how your ideas connect"
+        body="Backlinks and a visual graph help you jump between related concepts without losing context."
+      >
+        <div>
+          <MediaFrame src="/screens/Graph.png" alt="Graph view screenshot" sizes="(min-width: 768px) 50vw, 100vw" />
+          <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+            Graph view — relationships at a glance
+            <span className="ml-2 inline-block w-6 h-[2px] align-middle bg-orange-500" aria-hidden />
           </div>
         </div>
-      </footer>
+      </Section>
+
+      {/* SECTION B: Summary + Flashcards two-up */}
+      <Section
+        title="Summarize fast. Drill smarter."
+        body="Generate clean summaries and flashcards right from your notes."
+      >
+        <TwoUp
+          items={[
+            { src: '/screens/Summary.png', alt: 'Summary view screenshot', caption: 'AI-generated summary' },
+            { src: '/screens/Flashcard.png', alt: 'Flashcards view screenshot', caption: 'Flashcards generated from notes' },
+          ]}
+        />
+      </Section>
+
+      <FinalCta title="Start free. Build your brain." subtext="All core features included. Just limited API calls on the free plan." />
+
+      <SiteFooter />
     </main>
   )
 }

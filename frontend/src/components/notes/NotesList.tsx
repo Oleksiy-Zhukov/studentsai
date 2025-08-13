@@ -37,8 +37,8 @@ export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps)
     return (
       <div className="p-4 text-center">
         <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">No notes yet</p>
-        <p className="text-xs text-gray-400 mt-1">Create your first note to get started</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">No notes yet</p>
+        <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">Create your first note to get started</p>
       </div>
     )
   }
@@ -48,7 +48,7 @@ export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps)
       {notes.map((note) => (
         <div
           key={note.id}
-          className="group relative flex items-center space-x-3 rounded-lg px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors"
+          className="group relative flex items-center space-x-3 rounded-lg px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors dark:hover:bg-[#0f1115]"
           onClick={() => onSelect(note)}
         >
           {/* Note Icon */}
@@ -58,10 +58,10 @@ export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps)
 
           {/* Note Content */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-medium text-gray-900 truncate dark:text-gray-100">
               {note.title}
             </p>
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
+            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
               <span>{formatDate(note.updated_at)}</span>
               <span>•</span>
               <span>{getWordCount(note.content)} words</span>

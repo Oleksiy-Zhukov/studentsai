@@ -77,7 +77,7 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading flashcards...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading flashcards...</p>
         </div>
       </div>
     )
@@ -86,7 +86,7 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 dark:bg-red-950/30 dark:border-red-900/40 dark:text-red-300">
           {error}
         </div>
         <Button onClick={loadFlashcards}>Try Again</Button>
@@ -99,8 +99,8 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
       <div className="text-center py-12">
         <div className="mb-6">
           <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No flashcards yet</h3>
-          <p className="text-gray-600 mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">No flashcards yet</h3>
+          <p className="text-gray-600 mb-6 dark:text-gray-400">
             Generate AI-powered flashcards from your note content to enhance your studying.
           </p>
         </div>
@@ -128,9 +128,9 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Flashcards: {note.title}</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Flashcards: {note.title}</h2>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
             {currentIndex + 1} of {flashcards.length}
           </span>
           <Button variant="outline" onClick={onClose}>
@@ -139,7 +139,7 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
         </div>
       </div>
 
-      <Card className="mb-6 h-[420px] md:h-[480px]">
+      <Card className="mb-6 h-[420px] md:h-[480px] dark:border-[#232a36]">
         <CardContent className="p-0 h-full">
           <div className="flex flex-col h-full">
             {/* Content area with fixed height and internal scroll to prevent layout shift */}
@@ -147,8 +147,8 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
               {/* Question view */}
               <div className={`absolute inset-0 overflow-auto p-8 ${showAnswer ? 'hidden' : 'block'}`}>
                 <div className="text-center">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Question</h3>
-                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 dark:text-gray-100">Question</h3>
+                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap dark:text-gray-200">
                     {currentCard.question}
                   </p>
                 </div>
@@ -156,8 +156,8 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
               {/* Answer view */}
               <div className={`absolute inset-0 overflow-auto p-8 ${showAnswer ? 'block' : 'hidden'}`}>
                 <div className="text-center">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Answer</h3>
-                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 dark:text-gray-100">Answer</h3>
+                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap dark:text-gray-200">
                     {currentCard.answer}
                   </p>
                 </div>
@@ -165,7 +165,7 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
             </div>
 
             {/* Actions pinned under content to keep height consistent */}
-            <div className="border-t p-4 flex items-center justify-center">
+            <div className="border-t p-4 flex items-center justify-center dark:border-[#232a36]">
               <Button onClick={toggleAnswer} className="flex items-center space-x-2">
                 {showAnswer ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span>{showAnswer ? 'Hide Answer' : 'Show Answer'}</span>

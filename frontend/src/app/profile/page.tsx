@@ -18,7 +18,7 @@ const stats = {
 
 export default function ProfilePage() {
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 dark:bg-[#0f1115]">
       <section className="mx-auto max-w-3xl px-6 py-14">
         <Card className="mb-6">
           <CardContent className="flex items-center gap-4 p-5">
@@ -27,8 +27,8 @@ export default function ProfilePage() {
               <span className="text-lg font-semibold">SA</span>
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Your Profile</h1>
-              <p className="text-sm text-gray-600">you@example.com</p>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Your Profile</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">you@example.com</p>
             </div>
           </CardContent>
         </Card>

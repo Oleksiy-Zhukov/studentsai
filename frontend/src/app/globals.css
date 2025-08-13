@@ -2,3 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Subtle reveal animation for landing sections */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Use Noto Sans JP as a fallback for Japanese */
+:root {
+  --font-fallback-jp: 'Noto Sans JP', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+body {
+  font-family: var(--font-fallback-jp);
+}
+
+/* Dark theme tokens tuned closer to Obsidian */
+.dark {
+  color-scheme: dark;
+}
+
+.dark .card,
+.dark .shadcn-card,
+.dark .bg-card {
+  background-color: #141820;
+}
+
+.dark .border,
+.dark .shadcn-border {
+  border-color: #232a36;
+}
+
+
