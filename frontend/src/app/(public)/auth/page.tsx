@@ -1,12 +1,15 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { AuthForm } from '@/components/auth/AuthForm'
 
 export default function AuthPage() {
-  const router = useRouter()
   return (
-    <AuthForm onSuccess={() => router.replace('/')} />
+    <AuthForm onSuccess={() => {
+      if (typeof window !== 'undefined') {
+        // Hard navigation avoids any dev-router stalls
+        window.location.replace('/')
+      }
+    }} />
   )
 }
 

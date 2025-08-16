@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { api, type Note } from '@/lib/api'
-import { Save, Sparkles, FileText, X, Eye, Edit } from 'lucide-react'
+import { Save, FileText, X, Eye, Edit } from 'lucide-react'
+import Image from 'next/image'
 import { getWordCount } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ReactMarkdown from 'react-markdown'
@@ -82,13 +83,13 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white dark:bg-[#141820]">
       {/* Editor Header */}
-      <div className="border-b border-gray-200 px-6 py-3">
+      <div className="border-b border-gray-200 px-6 py-3 dark:border-[#232a36]">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <FileText className="h-5 w-5 text-gray-600" />
-            <span className="font-medium text-gray-900">
+            <FileText className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            <span className="font-medium text-gray-900 dark:text-gray-100">
               {isEditing ? 'Edit Note' : 'Create New Note'}
             </span>
           </div>
@@ -98,7 +99,7 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
               variant="ghost"
               size="sm"
               onClick={onCancel}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 dark:text-gray-300 dark:hover:bg-[#0f1115]"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -110,13 +111,13 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
       <div className="flex-1 flex flex-col overflow-hidden">
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'edit' | 'preview')} className="h-full flex flex-col">
           {/* Tab Navigation */}
-          <div className="border-b border-gray-200 px-6 py-2">
-            <TabsList className="bg-gray-100">
-              <TabsTrigger value="edit" className="flex items-center space-x-1">
+          <div className="border-b border-gray-200 px-6 py-2 dark:border-[#232a36]">
+            <TabsList className="bg-gray-100 dark:bg-[#0f1115] dark:border dark:border-[#232a36]">
+              <TabsTrigger value="edit" className="flex items-center space-x-1 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">
                 <Edit className="h-3 w-3" />
                 <span>Edit</span>
               </TabsTrigger>
-              <TabsTrigger value="preview" className="flex items-center space-x-1">
+              <TabsTrigger value="preview" className="flex items-center space-x-1 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">
                 <Eye className="h-3 w-3" />
                 <span>Preview</span>
               </TabsTrigger>
@@ -126,7 +127,7 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
           <TabsContent value="edit" className="h-full m-0 flex-1">
           <div className="h-full flex flex-col p-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 dark:bg-red-900/20 dark:border-red-900 dark:text-red-300">
                 {error}
               </div>
             )}
@@ -137,15 +138,15 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Note title..."
-                className="text-2xl font-semibold border-0 border-b border-gray-200 rounded-none px-0 py-2 focus:ring-0 focus:border-gray-400"
+                className="text-2xl font-semibold border-0 border-b border-gray-200 rounded-none px-0 py-2 focus:ring-0 focus:border-gray-400 dark:bg-[#141820] dark:text-gray-100 dark:border-[#232a36] dark:placeholder:text-gray-500 dark:focus:border-gray-500"
               />
             </div>
 
             {/* Content Textarea */}
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-500">Content</span>
-                <span className="text-sm text-gray-500">{wordCount} words</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Content</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{wordCount} words</span>
               </div>
               <Textarea
                 value={content}
@@ -170,12 +171,12 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                   }
                 }}
                 placeholder="Start writing your notes here..."
-                className="flex-1 resize-none border-0 focus:ring-0 text-gray-700 leading-relaxed"
+                className="flex-1 resize-none border-0 focus:ring-0 text-gray-700 leading-relaxed dark:bg-[#0f1115] dark:text-gray-100 dark:placeholder:text-gray-500"
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-[#232a36]">
               <div className="flex gap-2">
                 <Button
                   onClick={handleSave}
@@ -190,9 +191,9 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                   variant="outline"
                   onClick={handleSummarize}
                   disabled={summarizing || !content.trim()}
-                  className="flex items-center space-x-1"
+                  className="flex items-center space-x-1 dark:bg-[#0f1318] dark:hover:bg-[#1d2430] dark:border-gray-700 dark:text-gray-200"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Image src="/icons/summary-icon.svg" alt="Summary" width={16} height={16} />
                   <span>{summarizing ? 'Summarizing...' : 'AI Summary'}</span>
                 </Button>
               </div>
@@ -203,16 +204,16 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
         <TabsContent value="preview" className="h-full m-0">
           <div className="h-full p-6 overflow-y-auto">
             <div className="max-w-4xl mx-auto">
-              <h1 className="text-3xl font-bold text-gray-900 mb-6">{title || 'Untitled Note'}</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-6 dark:text-gray-100">{title || 'Untitled Note'}</h1>
               
               {note?.summary && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                  <h4 className="font-medium text-orange-900 mb-2">AI Summary</h4>
-                  <p className="text-orange-800">{note.summary}</p>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 dark:bg-orange-950/30 dark:border-orange-900/40">
+                  <h4 className="font-medium text-orange-900 mb-2 dark:text-orange-300">AI Summary</h4>
+                  <p className="text-orange-800 dark:text-orange-200">{note.summary}</p>
                 </div>
               )}
               
-              <div className="prose prose-orange max-w-none">
+              <div className="prose prose-orange max-w-none dark:prose-invert">
                 {content ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -223,7 +224,7 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                           return (
                             <a
                               href={href}
-                              className="text-orange-600 underline"
+                              className="text-orange-600 underline dark:text-orange-400"
                               onClick={(e) => {
                                 e.preventDefault()
                                 if (typeof window !== 'undefined') {
@@ -237,19 +238,19 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                             </a>
                           )
                         }
-                        return <a className="text-orange-600 underline" href={href} {...props}>{children}</a>
+                        return <a className="text-orange-600 underline dark:text-orange-400" href={href} {...props}>{children}</a>
                       },
                       p: ({ children }) => <p className="leading-relaxed">{children}</p>,
                       img: (props) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200" />
+                        <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200 dark:border-[#232a36]" />
                       ),
                     }}
                   >
                     {transformWikiLinksToMarkdown(content)}
                   </ReactMarkdown>
                 ) : (
-                  <div className="text-gray-500">No content yet...</div>
+                  <div className="text-gray-500 dark:text-gray-400">No content yet...</div>
                 )}
               </div>
             </div>

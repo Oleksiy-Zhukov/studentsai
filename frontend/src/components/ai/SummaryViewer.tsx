@@ -12,6 +12,7 @@ import {
   TrendingDown,
   Loader2
 } from 'lucide-react'
+import Image from 'next/image'
 import { api } from '@/lib/api'
 
 interface SummaryViewerProps {
@@ -71,7 +72,7 @@ export function SummaryViewer({ text, onClose }: SummaryViewerProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-          <Lightbulb className="h-6 w-6 text-orange-500" />
+          <Image src="/icons/summary-icon.svg" alt="Summary" width={28} height={28} />
           <span>AI Summary</span>
         </h2>
         <Button variant="outline" onClick={onClose}>

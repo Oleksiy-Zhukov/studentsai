@@ -15,12 +15,13 @@ interface SectionProps {
 	variant?: 'default' | 'alt'
 	className?: string
   id?: string
+  mirrored?: boolean
 }
 
-export function Section({ label, title, body, children, variant = 'default', className = '', id }: SectionProps) {
+export function Section({ label, title, body, children, variant = 'default', className = '', id, mirrored = false }: SectionProps) {
 	return (
 		<section id={id} className={`mx-auto max-w-7xl px-6 py-16 ${className}`} data-reveal>
-			<div className={variant === 'alt' ? 'grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start' : 'grid gap-10 md:grid-cols-2 items-start'}>
+			<div className={`${variant === 'alt' ? 'grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start' : 'grid gap-10 md:grid-cols-2 items-start'} ${mirrored ? 'md:[&>*:first-child]:order-2 md:[&>*:last-child]:order-1' : ''}`}>
 				<div>
 					{label && (
 						<div className="text-[11px] tracking-[0.14em] uppercase text-gray-500 dark:text-gray-400 mb-3">{label}</div>

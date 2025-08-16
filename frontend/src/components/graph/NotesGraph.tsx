@@ -1,17 +1,20 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { select } from 'd3-selection'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { select, type Selection } from 'd3-selection'
 import { zoom, type D3ZoomEvent } from 'd3-zoom'
 import { drag, type D3DragEvent } from 'd3-drag'
-import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, type SimulationNodeDatum, type SimulationLinkDatum } from 'd3-force'
-import { api, APIError, type GraphData, type GraphNode } from '@/lib/api'
+import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, type SimulationNodeDatum, type SimulationLinkDatum, type ForceLink, type Simulation, type ForceCollide } from 'd3-force'
+import { api, APIError, type GraphData, type GraphNode, type GraphConnection } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Network, RefreshCw } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
 
 interface NotesGraphProps {
   onNodeClick: (nodeId: string) => void
+  highlightNodeIds?: string[]
 }
 
 // Extend GraphNode with D3.js simulation properties
@@ -30,8 +33,16 @@ interface GraphSimulationLink extends SimulationLinkDatum<GraphSimulationNode> {
   connection_type: string
 }
 
-export function NotesGraph({ onNodeClick }: NotesGraphProps) {
+export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const nodesSelRef = useRef<Selection<SVGCircleElement, unknown, null, undefined> | null>(null)
+  const linksSelRef = useRef<Selection<SVGLineElement, unknown, null, undefined> | null>(null)
+  const labelsSelRef = useRef<Selection<SVGTextElement, unknown, null, undefined> | null>(null)
+  const currentNodeIdsRef = useRef<Set<string>>(new Set())
+  const onNodeClickRef = useRef(onNodeClick)
+  const simulationRef = useRef<Simulation<GraphSimulationNode, GraphSimulationLink> | null>(null)
+  const linkForceRef = useRef<ForceLink<GraphSimulationNode, GraphSimulationLink> | null>(null)
+  const collisionForceRef = useRef<ForceCollide<GraphSimulationNode> | null>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -39,9 +50,50 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
   const interactionModeRef = useRef<'repel' | 'attract'>(interactionMode)
   const isDraggingRef = useRef<boolean>(false)
 
+  // UX controls (inspired by Obsidian)
+  // Local/Depth controls temporarily hidden per UX feedback
+  const [localMode] = useState<boolean>(false)
+  const [depth] = useState<number>(1)
+  const [hideIsolated, setHideIsolated] = useState<boolean>(true)
+  const [focusSet, setFocusSet] = useState<Set<string>>(new Set())
+  const [collapsedSet, setCollapsedSet] = useState<Set<string>>(new Set())
+
+  // Adjustable forces (defaults provided by user)
+  const [centerForce, setCenterForce] = useState<number>(0.65)
+  const [repelForce, setRepelForce] = useState<number>(12.4)
+  const [linkForce, setLinkForce] = useState<number>(0.91)
+  const [linkDistance, setLinkDistance] = useState<number>(30)
+  const [nodeSizeBase, setNodeSizeBase] = useState<number>(0.51)
+  const [linkThicknessMul, setLinkThicknessMul] = useState<number>(0.1)
+  const [colorCoded, setColorCoded] = useState<boolean>(false)
+  const [showLabels, setShowLabels] = useState<boolean>(false)
+
+  // Compute highlight set from props
+  const highlightSet = useMemo(() => new Set((highlightNodeIds || []).map(String)), [highlightNodeIds])
+
   useEffect(() => {
     interactionModeRef.current = interactionMode
   }, [interactionMode])
+
+  useEffect(() => {
+    onNodeClickRef.current = onNodeClick
+  }, [onNodeClick])
+
+  // Re-render graph when theme (html.dark) toggles
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const html = document.documentElement
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.attributeName === 'class') {
+          setThemeKey((k) => k + 1)
+          break
+        }
+      }
+    })
+    observer.observe(html, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   const loadGraphData = async () => {
     try {
@@ -49,6 +101,10 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       setError('')
       const data = await api.getNotesGraph()
       setGraphData(data)
+      // initialize local focus with first node for localMode
+      if (data?.nodes?.length) {
+        setFocusSet(new Set([String(data.nodes[0].id)]))
+      }
     } catch (err) {
       console.error('Failed to load graph data:', err)
       if (err instanceof APIError) {
@@ -65,34 +121,86 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     loadGraphData()
   }, [])
 
+  // Compute local view subgraph (BFS from focusSet up to depth), apply collapsed/hide-isolated
+  const { viewNodes, viewLinks } = useMemo(() => {
+    if (!graphData) return { viewNodes: [] as GraphNode[], viewLinks: [] as GraphConnection[] }
+    const idToNode = new Map(graphData.nodes.map(n => [String(n.id), n]))
+    if (!localMode || focusSet.size === 0) {
+      // full graph, optionally hide isolated
+      const linkPairs = graphData.connections
+      const linkedIds = new Set<string>()
+      if (hideIsolated) {
+        for (const l of linkPairs) {
+          linkedIds.add(String(l.source_id)); linkedIds.add(String(l.target_id))
+        }
+      }
+      const nodes = hideIsolated ? graphData.nodes.filter(n => linkedIds.has(String(n.id))) : graphData.nodes
+      return { viewNodes: nodes, viewLinks: linkPairs }
+    }
+    // BFS to specified depth
+    const adj = new Map<string, Set<string>>()
+    for (const l of graphData.connections) {
+      const a = String(l.source_id), b = String(l.target_id)
+      if (!adj.has(a)) adj.set(a, new Set())
+      if (!adj.has(b)) adj.set(b, new Set())
+      adj.get(a)!.add(b)
+      adj.get(b)!.add(a)
+    }
+    const included = new Set<string>(Array.from(focusSet))
+    let frontier = Array.from(focusSet)
+    for (let d = 0; d < depth; d++) {
+      const next: string[] = []
+      for (const id of frontier) {
+        const nbrs = adj.get(id); if (!nbrs) continue
+        for (const nb of nbrs) {
+          // skip collapsed nodes' external expansion
+          if (collapsedSet.has(id) && !focusSet.has(nb)) continue
+          if (!included.has(nb)) { included.add(nb); next.push(nb) }
+        }
+      }
+      frontier = next
+    }
+    const nodes = Array.from(included).map(id => idToNode.get(id)!).filter(Boolean)
+    const nodeSet = new Set(nodes.map(n => String(n.id)))
+    const links = graphData.connections.filter(c => nodeSet.has(String(c.source_id)) && nodeSet.has(String(c.target_id)))
+    // optionally hide isolated in the local set
+    if (hideIsolated) {
+      const linkedIds = new Set<string>()
+      for (const l of links) { linkedIds.add(String(l.source_id)); linkedIds.add(String(l.target_id)) }
+      return { viewNodes: nodes.filter(n => linkedIds.has(String(n.id))), viewLinks: links }
+    }
+    return { viewNodes: nodes, viewLinks: links }
+  }, [graphData, localMode, focusSet, depth, hideIsolated, collapsedSet])
+
   const renderGraph = useCallback((): (() => void) | void => {
     if (!graphData || !svgRef.current) return
 
     // Validate graph data
-    if (!graphData.nodes || !Array.isArray(graphData.nodes) || graphData.nodes.length === 0) {
+    if (!viewNodes || !Array.isArray(viewNodes) || viewNodes.length === 0) {
       console.warn('No valid nodes found in graph data')
       return
     }
 
-    if (!graphData.connections || !Array.isArray(graphData.connections)) {
+    if (!viewLinks || !Array.isArray(viewLinks)) {
       console.warn('No valid connections found in graph data')
       return
     }
 
     // Convert nodes to simulation nodes
-    const simulationNodes: GraphSimulationNode[] = graphData.nodes.map(node => ({
+    const simulationNodes: GraphSimulationNode[] = viewNodes.map(node => ({
       ...node,
       x: undefined,
       y: undefined,
       fx: null,
       fy: null
     }))
+    currentNodeIdsRef.current = new Set(simulationNodes.map(n => String(n.id)))
 
     // Create a map for quick node lookup
     const nodeMap = new Map(simulationNodes.map(node => [node.id, node]))
 
     // Filter and transform connections to D3.js format
-    const validConnections: GraphSimulationLink[] = graphData.connections
+    const validConnections: GraphSimulationLink[] = viewLinks
       .filter(connection => {
         const sourceExists = nodeMap.has(connection.source_id)
         const targetExists = nodeMap.has(connection.target_id)
@@ -108,7 +216,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     console.log('Graph data:', {
       nodes: simulationNodes.length,
       connections: validConnections.length,
-      totalConnections: graphData.connections.length
+      totalConnections: (graphData.connections?.length || 0)
     })
 
     const svg = select(svgRef.current)
@@ -128,35 +236,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
 
     // Theme-aware styling
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
-    const linkBase = isDark ? '#cbd5e1' : '#94a3b8' // slate-300 on dark, slate-400 on light
-
-    // Layers: zoom/pan on rootG, chart elements inside chartG with margins
-    const defs = svg.append('defs')
-    const glow = defs.append('filter')
-      .attr('id', 'link-glow')
-      .attr('height', '200%')
-      .attr('width', '200%')
-      .attr('x', '-50%')
-      .attr('y', '-50%')
-    glow.append('feGaussianBlur')
-      .attr('stdDeviation', isDark ? 2.5 : 2)
-      .attr('result', 'coloredBlur')
-    const feMerge = glow.append('feMerge')
-    feMerge.append('feMergeNode').attr('in', 'coloredBlur')
-    feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
-
-    const nodeShadow = defs.append('filter')
-      .attr('id', 'node-shadow')
-      .attr('height', '200%')
-      .attr('width', '200%')
-      .attr('x', '-50%')
-      .attr('y', '-50%')
-    nodeShadow.append('feDropShadow')
-      .attr('dx', 0)
-      .attr('dy', 1)
-      .attr('stdDeviation', 2)
-      .attr('flood-color', isDark ? '#000000' : '#94a3b8')
-      .attr('flood-opacity', isDark ? 0.6 : 0.3)
+    const linkBase = isDark ? '#ffffff' : '#334155'
 
     const rootG = svg.append('g').attr('class', 'zoom-layer')
     const g = rootG.append('g')
@@ -164,34 +244,34 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('transform', `translate(${margin.left},${margin.top})`)
 
     // Node radius helper
-    const nodeRadius = (d: GraphSimulationNode) => Math.min(32, Math.sqrt((d.word_count || 100) / 10) + 8)
+    const nodeRadius = (d: GraphSimulationNode) => {
+      const base = Math.max(4, 8 * nodeSizeBase)
+      return base
+    }
 
     // Forces
-    const chargeForce = forceManyBody().strength(-240)
+    const chargeForce = forceManyBody().strength(-repelForce * 20)
 
     // Create simulation with tuned forces to reduce jitter/overlap
-    const simulation = forceSimulation<GraphSimulationNode>(simulationNodes)
-      .force('link', forceLink<GraphSimulationNode, GraphSimulationLink>(validConnections)
+    const linkF = forceLink<GraphSimulationNode, GraphSimulationLink>(validConnections)
         .id((d: GraphSimulationNode) => d.id)
-        .distance(150)
-        .strength(0.5))
+        .distance(Math.max(20, linkDistance * 5))
+        .strength(linkForce)
+    const collideF = forceCollide<GraphSimulationNode>().radius((d: GraphSimulationNode) => nodeRadius(d) + 6).iterations(2)
+
+    const simulation = forceSimulation<GraphSimulationNode>(simulationNodes)
+      .force('link', linkF)
       .force('charge', chargeForce)
-      .force('center', forceCenter((width - margin.left - margin.right) / 2, (height - margin.top - margin.bottom) / 2))
-      .force('collision', forceCollide<GraphSimulationNode>().radius((d: GraphSimulationNode) => nodeRadius(d) + 6).iterations(2))
+      .force('center', forceCenter((width - margin.left - margin.right) / 2, (height - margin.top - margin.bottom) / 2).strength(centerForce))
+      .force('collision', collideF)
       .alpha(1)
       .alphaDecay(0.06)
       .velocityDecay(0.5)
 
-    // Create link halo underlay for visibility
-    const linksHalo = g.append('g')
-      .selectAll('line')
-      .data(validConnections)
-      .enter()
-      .append('line')
-      .attr('stroke', linkBase)
-      .attr('stroke-width', (d: GraphSimulationLink) => 2 + d.similarity * 3)
-      .attr('stroke-opacity', isDark ? 0.35 : 0.25)
-      .style('filter', 'url(#link-glow)')
+    // Save forces and simulation for incremental updates
+    simulationRef.current = simulation
+    linkForceRef.current = linkF
+    collisionForceRef.current = collideF
 
     // Create links (main stroke)
     const links = g.append('g')
@@ -199,10 +279,16 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .data(validConnections)
       .enter()
       .append('line')
-      .attr('stroke', linkBase)
-      .attr('stroke-width', (d: GraphSimulationLink) => 1.25 + d.similarity * 2.5)
-      .attr('stroke-opacity', isDark ? 0.9 : 0.85)
-      .style('filter', 'url(#link-glow)')
+      .attr('stroke', (d: GraphSimulationLink) => {
+        if (!colorCoded) return linkBase
+        return d.connection_type === 'manual' ? (isDark ? '#f59e0b' : '#f97316') : linkBase
+      })
+      .attr('stroke-width', (d: GraphSimulationLink) => 1 + Math.max(0.2, d.similarity) * (3 * linkThicknessMul))
+      .attr('stroke-opacity', 1)
+      .attr('vector-effect', 'non-scaling-stroke')
+      .attr('shape-rendering', 'geometricPrecision')
+      .attr('stroke-linecap', 'round')
+      .attr('stroke-linejoin', 'round')
 
     // Create nodes
     const nodes = g.append('g')
@@ -211,11 +297,10 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .enter()
       .append('circle')
       .attr('r', (d: GraphSimulationNode) => nodeRadius(d))
-      .attr('fill', '#f97316')
-      .attr('stroke', '#ea580c')
+      .attr('fill', isDark ? '#fb923c' : '#f97316')
+      .attr('stroke', isDark ? '#f97316' : '#ea580c')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
-      .style('filter', 'url(#node-shadow)')
       .call(drag<SVGCircleElement, GraphSimulationNode>()
         .on('start', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
           if (!event.active) simulation.alphaTarget(0.3).restart()
@@ -242,11 +327,19 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
           isDraggingRef.current = false
           d.fx = null
           d.fy = null
+          // Restore labels if toggle is on
+          if (showLabels && labelsSelRef.current) {
+            labelsSelRef.current.style('opacity', 1)
+          }
         }))
 
     // Add click handler to nodes
     nodes.on('click', (_event: MouseEvent, d: GraphSimulationNode) => {
-      onNodeClick(d.id)
+      // Expand local graph by making this node a focus
+      const next = new Set(focusSet)
+      if (next.has(String(d.id))) next.delete(String(d.id)); else next.add(String(d.id))
+      setFocusSet(next)
+      onNodeClickRef.current && onNodeClickRef.current(d.id)
     })
 
     // Add labels
@@ -265,6 +358,12 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
       .style('pointer-events', 'none')
+      .style('opacity', showLabels ? 1 : 0)
+
+    // Save selections for incremental updates
+    nodesSelRef.current = nodes as any
+    linksSelRef.current = links as any
+    labelsSelRef.current = labels as any
 
     // Add tooltips (clean any existing first) and configure interactions
     select('body').selectAll('div.tooltip').remove()
@@ -304,25 +403,28 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
     })
 
     const dimRest = (id: string) => {
-      nodes.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0.25))
-      labels.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0.25))
+      nodes.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0.45))
+      if (showLabels) {
+        labels.style('opacity', 1)
+      } else {
+        labels.style('opacity', (d: GraphSimulationNode) => (d.id === id || neighborMap.get(String(id))?.has(String(d.id)) ? 1 : 0))
+      }
       links
-        .attr('stroke-opacity', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 1 : 0.15))
-        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 3 + l.similarity * 2.8 : 1.25 + l.similarity * 2))
-      linksHalo
-        .attr('stroke-opacity', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? (isDark ? 0.5 : 0.4) : (isDark ? 0.15 : 0.1)))
-        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 3 + l.similarity * 3.5 : 2 + l.similarity * 3))
+        .attr('stroke', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? linkBase : (isDark ? '#64748b' : '#94a3b8')))
+        .attr('stroke-opacity', 1)
+        .attr('stroke-width', (l: GraphSimulationLink) => (l.source.id === id || l.target.id === id ? 2 + Math.max(0.2, l.similarity) * 3.5 : 1 + Math.max(0.2, l.similarity) * 2))
     }
 
     const clearDim = () => {
       nodes.style('opacity', 1)
-      labels.style('opacity', 1)
+      labels.style('opacity', showLabels ? 1 : 0)
       links
-        .attr('stroke-opacity', isDark ? 0.9 : 0.85)
-        .attr('stroke-width', (d: GraphSimulationLink) => 1.25 + d.similarity * 2.5)
-      linksHalo
-        .attr('stroke-opacity', isDark ? 0.35 : 0.25)
-        .attr('stroke-width', (d: GraphSimulationLink) => 2 + d.similarity * 3)
+        .attr('stroke', (d: GraphSimulationLink) => {
+          if (!colorCoded) return linkBase
+          return d.connection_type === 'manual' ? (isDark ? '#f59e0b' : '#f97316') : linkBase
+        })
+        .attr('stroke-opacity', 1)
+        .attr('stroke-width', (d: GraphSimulationLink) => 1 + Math.max(0.2, d.similarity) * (3 * linkThicknessMul))
     }
 
     nodes
@@ -337,6 +439,8 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
             ${d.content_preview || 'No preview available'}<br/>
             <em>${d.word_count || 0} words</em>
           `)
+          // On hover, show labels for hovered and adjacent only
+          labels.style('opacity', (n: GraphSimulationNode) => (n.id === d.id || neighborMap.get(String(d.id))?.has(String(n.id)) ? 1 : 0))
         }, 250)
       })
       .on('mousemove', (event: MouseEvent) => {
@@ -348,16 +452,15 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       .on('mouseout', () => {
         hideTooltip()
         clearDim()
+        // After hover, restore global labels state
+        if (labelsSelRef.current) {
+          labelsSelRef.current.style('opacity', showLabels ? 1 : 0)
+        }
       })
 
     // Update positions on simulation tick
     simulation.on('tick', () => {
       links
-        .attr('x1', (d: GraphSimulationLink) => d.source.x || 0)
-        .attr('y1', (d: GraphSimulationLink) => d.source.y || 0)
-        .attr('x2', (d: GraphSimulationLink) => d.target.x || 0)
-        .attr('y2', (d: GraphSimulationLink) => d.target.y || 0)
-      linksHalo
         .attr('x1', (d: GraphSimulationLink) => d.source.x || 0)
         .attr('y1', (d: GraphSimulationLink) => d.source.y || 0)
         .attr('x2', (d: GraphSimulationLink) => d.target.x || 0)
@@ -399,7 +502,82 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
       svg.on('.zoom', null)
       document.removeEventListener('click', onAnyClick)
     }
-  }, [graphData, onNodeClick])
+  }, [graphData, viewNodes.length, viewLinks.length, localMode, depth, linkForce, centerForce, repelForce, focusSet])
+
+  // Incremental visual updates for highlight and labels without full rerender
+  useEffect(() => {
+    const nodes = nodesSelRef.current
+    const links = linksSelRef.current
+    const labels = labelsSelRef.current
+    if (!nodes || !links || !labels) return
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+    const linkBase = isDark ? '#ffffff' : '#334155'
+    const setStrokeColor = (d: any) => (colorCoded && d.connection_type === 'manual' ? (isDark ? '#f59e0b' : '#f97316') : linkBase)
+
+    const ids = new Set((highlightNodeIds || []).map(String))
+    const hasAny = (() => {
+      if (ids.size === 0) return false
+      for (const id of ids) if (currentNodeIdsRef.current.has(id)) return true
+      return false
+    })()
+    if (ids.size === 0) {
+      nodes.style('opacity', 1)
+      labels.style('opacity', showLabels ? 1 : 0)
+      links
+        .attr('stroke', setStrokeColor as any)
+        .attr('stroke-opacity', 1)
+      return
+    }
+    if (!hasAny) {
+      // No matches in current view → reset to default; avoid dimming all
+      nodes.style('opacity', 1)
+      labels.style('opacity', showLabels ? 1 : 0)
+      links
+        .attr('stroke', setStrokeColor as any)
+        .attr('stroke-opacity', 1)
+      return
+    }
+    // Combine search highlight with hideIsolated logic without re-simulating
+    // Build connected set from existing links data
+    const linkData: any[] = (links as any).data()
+    const connected = new Set<string>()
+    for (const l of linkData) { connected.add(String(l.source.id)); connected.add(String(l.target.id)) }
+    nodes.style('opacity', (d: any) => {
+      const idStr = String(d.id)
+      if (hideIsolated && !connected.has(idStr)) return 0
+      return ids.has(idStr) ? 1 : 0.25
+    })
+    labels.style('opacity', (d: any) => (ids.has(String(d.id)) ? 1 : (showLabels ? 1 : 0)))
+    links
+      .attr('stroke-opacity', (l: any) => (ids.has(String(l.source.id)) || ids.has(String(l.target.id)) ? 1 : 0.3))
+      .attr('stroke', setStrokeColor as any)
+  }, [highlightNodeIds, colorCoded, showLabels, hideIsolated])
+
+  // Update edge thickness without full re-render to keep layout stable
+  useEffect(() => {
+    const links = linksSelRef.current
+    if (!links) return
+    links.attr('stroke-width', (d: any) => 1 + Math.max(0.2, (d.similarity || 0)) * (3 * linkThicknessMul))
+  }, [linkThicknessMul])
+
+  // Incremental update: link distance
+  useEffect(() => {
+    if (!linkForceRef.current || !simulationRef.current) return
+    linkForceRef.current.distance(Math.max(20, linkDistance * 5))
+    simulationRef.current.alphaTarget(0.2).restart()
+    setTimeout(() => simulationRef.current && simulationRef.current.alphaTarget(0), 200)
+  }, [linkDistance])
+
+  // Incremental update: node size and collision
+  useEffect(() => {
+    const nodes = nodesSelRef.current
+    if (!nodes || !collisionForceRef.current || !simulationRef.current) return
+    const base = Math.max(4, 8 * nodeSizeBase)
+    nodes.attr('r', base)
+    collisionForceRef.current.radius(base + 6)
+    simulationRef.current.alphaTarget(0.15).restart()
+    setTimeout(() => simulationRef.current && simulationRef.current.alphaTarget(0), 200)
+  }, [nodeSizeBase])
 
   useEffect(() => {
     if (!graphData || !svgRef.current) return
@@ -411,9 +589,9 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-white dark:bg-[#0b0f14] border border-gray-200 dark:border-gray-800">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <Network className="h-5 w-5" />
             <span>Notes Graph</span>
           </CardTitle>
@@ -422,7 +600,7 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading graph...</p>
+              <p className="text-gray-600 dark:text-gray-300">Loading graph...</p>
             </div>
           </div>
         </CardContent>
@@ -432,16 +610,16 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
 
   if (error) {
     return (
-      <Card>
+      <Card className="bg-white dark:bg-[#0b0f14] border border-gray-200 dark:border-gray-800">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <Network className="h-5 w-5" />
             <span>Notes Graph</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
               {error}
             </div>
             <Button onClick={loadGraphData}>Try Again</Button>
@@ -453,18 +631,18 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
 
   if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
     return (
-      <Card>
+      <Card className="bg-white dark:bg-[#0b0f14] border border-gray-200 dark:border-gray-800">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <Network className="h-5 w-5" />
             <span>Notes Graph</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <Network className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No notes to visualize</h3>
-            <p className="text-gray-600">Create at least 2 notes to see connections between them.</p>
+            <Network className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No notes to visualize</h3>
+            <p className="text-gray-600 dark:text-gray-300">Create at least 2 notes to see connections between them.</p>
           </div>
         </CardContent>
       </Card>
@@ -472,43 +650,38 @@ export function NotesGraph({ onNodeClick }: NotesGraphProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-[#0b0f14] border border-gray-200 dark:border-gray-800">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <Network className="h-5 w-5" />
             <span>Notes Graph</span>
           </CardTitle>
           <div className="flex items-center gap-2">
-            <div className="flex rounded-md border border-gray-200 overflow-hidden">
-              <button
-                className={`px-3 py-1 text-sm ${interactionMode === 'repel' ? 'bg-orange-50 text-orange-700' : 'bg-white text-gray-700'} hover:bg-orange-50`}
-                onClick={() => setInteractionMode('repel')}
-              >
-                Repel
-              </button>
-              <button
-                className={`px-3 py-1 text-sm border-l border-gray-200 ${interactionMode === 'attract' ? 'bg-orange-50 text-orange-700' : 'bg-white text-gray-700'} hover:bg-orange-50`}
-                onClick={() => setInteractionMode('attract')}
-              >
-                Attract
-              </button>
-            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={loadGraphData}
               disabled={loading}
-              className="flex items-center space-x-1"
+              className="flex items-center space-x-1 dark:border-gray-700 dark:text-gray-200 dark:bg-[#0f1318] dark:hover:bg-[#1d2430]"
             >
               <RefreshCw className="h-4 w-4" />
               <span>Refresh</span>
             </Button>
           </div>
         </div>
-        <p className="text-sm text-gray-600">
-          Visualizing {graphData.nodes.length} notes with {graphData.connections?.length || 0} connections.
-          Click on nodes to view notes, drag to rearrange.
+        {/* Controls */}
+        <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-center text-xs text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2"><input type="checkbox" checked={hideIsolated} onChange={(e) => setHideIsolated(e.target.checked)} /> Hide isolated</label>
+          <div className="flex items-center gap-2"><span>Distance</span><Input type="number" step={1} value={linkDistance} onChange={(e)=>setLinkDistance(Number(e.target.value)||0)} className="h-7 w-20 dark:bg-[#0f1318] dark:border-gray-700"/></div>
+          <div className="flex items-center gap-2"><span>Node size</span><Input type="number" step={0.01} value={nodeSizeBase} onChange={(e)=>setNodeSizeBase(Number(e.target.value)||0)} className="h-7 w-24 dark:bg-[#0f1318] dark:border-gray-700"/></div>
+          <div className="flex items-center gap-2"><span>Edge thickness</span><Input type="number" step={0.01} value={linkThicknessMul} onChange={(e)=>setLinkThicknessMul(Number(e.target.value)||0)} className="h-7 w-28 dark:bg-[#0f1318] dark:border-gray-700"/></div>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={colorCoded} onChange={(e)=>setColorCoded(e.target.checked)} /> Color coded</label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={showLabels} onChange={(e)=>setShowLabels(e.target.checked)} /> Labels</label>
+        </div>
+        <Separator className="mt-3 dark:bg-[#232a36]" />
+        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+          Showing {viewNodes.length} nodes / {viewLinks.length} edges. Click a node to expand local view. Hover to reveal labels.
         </p>
       </CardHeader>
       <CardContent>

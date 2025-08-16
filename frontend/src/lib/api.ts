@@ -15,7 +15,51 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL || 'http:/
 export interface User {
   id: string
   email: string
+  username: string
   created_at: string
+}
+
+export interface UserProfileUpdate {
+  username?: string
+  email?: string
+  current_password?: string
+  new_password?: string
+}
+
+export interface UsernameCheck {
+  username: string
+  available: boolean
+}
+
+export interface SettingsAppearance {
+  theme: 'light' | 'dark' | 'system'
+  font_size: 'small' | 'medium' | 'large'
+  layout_density: 'compact' | 'dense' | 'comfortable'
+}
+
+export interface SettingsGraph {
+  edge_thickness_scale: number
+  node_spacing: number
+  show_backlinks: boolean
+  physics_enabled: boolean
+  clustering_strength: number
+}
+
+export interface SettingsAI {
+  use_openai: boolean
+  daily_request_limit: number
+  enable_caching: boolean
+}
+
+export interface SettingsStudyFlow {
+  quiz_enabled: boolean
+  flashcard_auto_review: boolean
+  linked_notes_suggestions: boolean
+}
+
+export interface SettingsAdvanced {
+  data_export_enabled: boolean
+  analytics_enabled: boolean
 }
 
 export interface Note {
@@ -56,6 +100,41 @@ export interface GraphData {
   nodes: GraphNode[]
   connections: GraphConnection[]
   total_nodes: number
+}
+
+// Profile/stat types
+export type EventType = 'NOTE_CREATED' | 'NOTE_REVIEWED' | 'FLASHCARD_CREATED' | 'FLASHCARD_REVIEWED'
+
+export interface ProfileSummary {
+  notes_created: number
+  notes_reviewed: number
+  flashcards_created: number
+  flashcards_reviewed: number
+  current_streak: number
+  best_streak: number
+  activity_7d: number
+  activity_30d: number
+}
+
+export interface ActivityDayCount {
+  date: string // YYYY-MM-DD UTC
+  count: number
+  top_type?: EventType
+}
+
+export interface ActivityResponse {
+  from_date: string
+  to_date: string
+  kind: 'all' | 'notes' | 'flashcards'
+  days: ActivityDayCount[]
+}
+
+export interface EventItem {
+  id: string
+  event_type: EventType
+  occurred_at: string
+  target_id?: string
+  metadata?: Record<string, unknown>
 }
 
 class APIError extends Error {
@@ -235,31 +314,88 @@ class APIClient {
     return this.request('/graph')
   }
 
-  // Keywords/tags/backlinks
-  async getSuggestedKeywords(noteId: string): Promise<{ note_id: string; keywords: string[] }> {
-    return this.request(`/notes/${noteId}/keywords`)
+  // Profile/stat endpoints
+  async getProfileSummary(): Promise<ProfileSummary> {
+    return this.request('/api/profile/summary')
   }
 
-  async updateTags(noteId: string, tags: string[]): Promise<Note> {
-    return this.request(`/notes/${noteId}/tags`, {
-      method: 'PUT',
-      body: JSON.stringify({ tags }),
+  async getRecentEvents(): Promise<EventItem[]> {
+    return this.request('/api/profile/recent')
+  }
+
+  async getProfileActivity(fromISODate: string, toISODate: string, kind: 'all' | 'notes' | 'flashcards' = 'all'): Promise<ActivityResponse> {
+    const params = new URLSearchParams({ from_date: fromISODate, to_date: toISODate, kind })
+    return this.request(`/api/profile/activity?${params.toString()}`)
+  }
+
+  // Settings endpoints
+  async getProfileSettings(): Promise<User> {
+    return this.request('/api/settings/profile')
+  }
+
+  async updateProfileSettings(updates: Partial<UserProfileUpdate>): Promise<User> {
+    return this.request('/api/settings/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
     })
   }
 
-  async getBacklinks(noteId: string): Promise<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>> {
-    return this.request(`/notes/${noteId}/backlinks`)
+  async checkUsernameAvailability(username: string): Promise<UsernameCheck> {
+    return this.request(`/api/settings/username/check/${username}`)
   }
 
-  async createManualLink(noteId: string, targetNoteId: string): Promise<{ message: string }> {
-    return this.request(`/notes/${noteId}/links?target_note_id=${encodeURIComponent(targetNoteId)}`, {
-      method: 'POST',
+  async getAppearanceSettings(): Promise<SettingsAppearance> {
+    return this.request('/api/settings/appearance')
+  }
+
+  async updateAppearanceSettings(settings: SettingsAppearance): Promise<SettingsAppearance> {
+    return this.request('/api/settings/appearance', {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
     })
   }
 
-  async deleteManualLink(noteId: string, targetNoteId: string): Promise<{ message: string }> {
-    return this.request(`/notes/${noteId}/links/${encodeURIComponent(targetNoteId)}`, {
-      method: 'DELETE',
+  async getGraphSettings(): Promise<SettingsGraph> {
+    return this.request('/api/settings/graph')
+  }
+
+  async updateGraphSettings(settings: SettingsGraph): Promise<SettingsGraph> {
+    return this.request('/api/settings/graph', {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
+    })
+  }
+
+  async getAISettings(): Promise<SettingsAI> {
+    return this.request('/api/settings/ai')
+  }
+
+  async updateAISettings(settings: SettingsAI): Promise<SettingsAI> {
+    return this.request('/api/settings/ai', {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
+    })
+  }
+
+  async getStudyFlowSettings(): Promise<SettingsStudyFlow> {
+    return this.request('/api/settings/studyflow')
+  }
+
+  async updateStudyFlowSettings(settings: SettingsStudyFlow): Promise<SettingsStudyFlow> {
+    return this.request('/api/settings/studyflow', {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
+    })
+  }
+
+  async getAdvancedSettings(): Promise<SettingsAdvanced> {
+    return this.request('/api/settings/advanced')
+  }
+
+  async updateAdvancedSettings(settings: SettingsAdvanced): Promise<SettingsAdvanced> {
+    return this.request('/api/settings/advanced', {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
     })
   }
 }
@@ -267,4 +403,3 @@ class APIClient {
 export const api = new APIClient(API_BASE_URL)
 
 export { APIError }
-

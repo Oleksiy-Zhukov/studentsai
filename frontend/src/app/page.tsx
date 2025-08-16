@@ -84,6 +84,9 @@ export default function Home() {
     setNotes([])
     setCurrentView('notes')
     setSelectedNote(null)
+    if (typeof window !== 'undefined') {
+      window.location.replace('/landing')
+    }
   }
 
   const handleCreateNote = () => {
@@ -237,7 +240,7 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f1115]">
       {/* Top Header */}
-      <Header user={user} onLogout={handleLogout} />
+      <Header user={user} onLogout={handleLogout} context="notes" />
       
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -265,7 +268,7 @@ export default function Home() {
             <Button
               size="sm"
               onClick={handleCreateNote}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-white"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -304,11 +307,11 @@ export default function Home() {
                   <div className="flex items-center space-x-4">
                     <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as View)}>
                       <TabsList className="bg-gray-100 dark:bg-[#0f1115] dark:border dark:border-[#232a36]">
-                        <TabsTrigger value="notes" className="flex items-center space-x-2">
+                        <TabsTrigger value="notes" className="flex items-center space-x-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">
                           <FileText className="h-4 w-4" />
                           <span>Notes</span>
                         </TabsTrigger>
-                        <TabsTrigger value="graph" className="flex items-center space-x-2">
+                        <TabsTrigger value="graph" className="flex items-center space-x-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">
                           <Network className="h-4 w-4" />
                           <span>Graph</span>
                         </TabsTrigger>
@@ -322,6 +325,7 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditNote(selectedNote)}
+                        className="border-gray-200 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:bg-[#0f1318] dark:hover:bg-[#1d2430]"
                       >
                         Edit
                       </Button>
@@ -329,9 +333,10 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewFlashcards(selectedNote)}
-                        className="flex items-center space-x-1"
+                        className="flex items-center space-x-1 border-gray-200 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:bg-[#0f1318] dark:hover:bg-[#1d2430]"
                       >
-                        <Zap className="h-4 w-4" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/icons/flashcards-icon.svg" alt="Flashcards" className="h-4 w-4" />
                         <span>Flashcards</span>
                       </Button>
                     </div>
@@ -513,7 +518,7 @@ export default function Home() {
                 )}
 
                 {currentView === 'graph' && (
-                  <NotesGraph onNodeClick={handleGraphNodeClick} />
+                  <NotesGraph onNodeClick={handleGraphNodeClick} highlightNodeIds={filteredNotes.map(n=>n.id)} />
                 )}
               </div>
             </div>

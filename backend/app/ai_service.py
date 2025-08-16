@@ -166,16 +166,24 @@ class AIService:
 
         try:
             # Create TF-IDF vectors
+            # More permissive vectorizer to make similarity matching easier
             vectorizer = TfidfVectorizer(
-                max_features=1000, stop_words="english", ngram_range=(1, 2)
+                max_features=3000,
+                stop_words="english",
+                ngram_range=(1, 2),
+                sublinear_tf=True,
+                norm="l2",
             )
 
             tfidf_matrix = vectorizer.fit_transform(texts)
 
             # Calculate cosine similarity
             similarity_matrix = cosine_similarity(tfidf_matrix)
+            # Calibrate similarities to be less strict: boost medium sims upward
+            # boosted = min(1, sqrt(sim) * 1.1)
+            boosted = np.minimum(1.0, np.sqrt(np.maximum(similarity_matrix, 0.0)) * 1.1)
 
-            return similarity_matrix
+            return boosted
 
         except Exception as e:
             logger.error(f"Error calculating similarity: {str(e)}")

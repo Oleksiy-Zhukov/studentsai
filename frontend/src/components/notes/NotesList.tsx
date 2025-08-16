@@ -75,7 +75,7 @@ export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps)
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0"
+                  className="h-6 w-6 p-0 dark:text-gray-300 dark:hover:bg-[#0f1115]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <MoreHorizontal className="h-3 w-3" />

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { api, type Flashcard, type Note } from '@/lib/api'
-import { RotateCcw, ChevronLeft, ChevronRight, Sparkles, Eye, EyeOff } from 'lucide-react'
+import { RotateCcw, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import Image from 'next/image'
 
 interface FlashcardViewerProps {
   note: Note
@@ -98,7 +99,7 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
     return (
       <div className="text-center py-12">
         <div className="mb-6">
-          <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Image src="/icons/flashcards-icon.svg" alt="Flashcards" width={48} height={48} className="mx-auto mb-4 opacity-80" />
           <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">No flashcards yet</h3>
           <p className="text-gray-600 mb-6 dark:text-gray-400">
             Generate AI-powered flashcards from your note content to enhance your studying.
@@ -109,13 +110,12 @@ export function FlashcardViewer({ note, onClose }: FlashcardViewerProps) {
           <Button
             onClick={generateFlashcards}
             disabled={generating}
-            className="flex items-center space-x-2"
+            className="mx-auto"
           >
-            <Sparkles className="h-4 w-4" />
-            <span>{generating ? 'Generating...' : 'Generate Flashcards'}</span>
+            {generating ? 'Generating...' : 'Generate Flashcards'}
           </Button>
           
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} className="mx-auto">
             Back to Notes
           </Button>
         </div>

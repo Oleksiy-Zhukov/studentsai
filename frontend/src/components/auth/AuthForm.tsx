@@ -30,11 +30,8 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
       }
       onSuccess()
     } catch (err) {
-      if (err instanceof APIError) {
-        setError(err.message)
-      } else {
-        setError('An unexpected error occurred')
-      }
+      if (err instanceof APIError) setError(err.message)
+      else setError('An unexpected error occurred')
     } finally {
       setLoading(false)
     }

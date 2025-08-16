@@ -15,9 +15,10 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle'
 interface HeaderProps {
   user: User
   onLogout: () => void
+  context?: 'notes' | 'profile' | 'settings'
 }
 
-export function Header({ user, onLogout }: HeaderProps) {
+export function Header({ user, onLogout, context = 'notes' }: HeaderProps) {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-3 dark:bg-[#141820] dark:border-[#232a36]">
       <div className="flex items-center justify-between">
@@ -35,9 +36,21 @@ export function Header({ user, onLogout }: HeaderProps) {
         {/* Nav + User Menu */}
         <div className="flex items-center space-x-3">
           <nav className="hidden sm:flex items-center gap-4 mr-2 text-sm text-gray-700 dark:text-gray-300">
-            <Link href="/profile" className="hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-1">
-              Profile
-            </Link>
+            {context !== 'notes' && (
+              <Link href="/" className="hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-1">
+                Notes
+              </Link>
+            )}
+            {context !== 'profile' && (
+              <Link href="/profile" className="hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-1">
+                Profile
+              </Link>
+            )}
+            {context !== 'settings' && (
+              <Link href="/settings" className="hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-1">
+                Settings
+              </Link>
+            )}
           </nav>
           <ThemeToggle />
           <DropdownMenu>
@@ -49,14 +62,22 @@ export function Header({ user, onLogout }: HeaderProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
+                <Link href="/" className="flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  Notes
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/profile" className="flex items-center">
-                  <Settings className="h-4 w-4 mr-2" />
+                  <User className="h-4 w-4 mr-2" />
                   Profile
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onLogout} className="text-red-600">
                 <LogOut className="h-4 w-4 mr-2" />
