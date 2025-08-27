@@ -11,6 +11,7 @@ alembic==1.12.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
+PyJWT==2.9.0
 
 # OAuth (NEW)
 google-auth==2.23.4
