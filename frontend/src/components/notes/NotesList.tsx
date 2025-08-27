@@ -17,9 +17,10 @@ interface NotesListProps {
   onEdit: (note: Note) => void
   onDelete: (noteId: string) => void
   onSelect: (note: Note) => void
+  selectedNoteId?: string
 }
 
-export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps) {
+export function NotesList({ notes, onEdit, onDelete, onSelect, selectedNoteId }: NotesListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (noteId: string) => {
@@ -48,7 +49,11 @@ export function NotesList({ notes, onEdit, onDelete, onSelect }: NotesListProps)
       {notes.map((note) => (
         <div
           key={note.id}
-          className="group relative flex items-center space-x-3 rounded-lg px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors dark:hover:bg-[#0f1115]"
+          className={`group relative flex items-center space-x-3 rounded-lg px-3 py-2 cursor-pointer transition-colors border-l-2 ${
+            selectedNoteId === note.id
+              ? 'bg-orange-50 border-orange-500 dark:bg-orange-950/20 dark:border-orange-400'
+              : 'hover:bg-gray-100 border-transparent dark:hover:bg-[#0f1115]'
+          }`}
           onClick={() => onSelect(note)}
         >
           {/* Note Icon */}

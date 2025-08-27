@@ -1,21 +1,10 @@
-const normalizeBaseUrl = (url: string): string => {
-  try {
-    const u = new URL(url)
-    if (u.hostname === 'localhost') {
-      u.hostname = '127.0.0.1'
-    }
-    return u.toString().replace(/\/$/, '')
-  } catch {
-    return url
-  }
-}
-
-const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000')
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export interface User {
   id: string
   email: string
   username: string
+  has_password?: boolean
   created_at: string
 }
 
@@ -79,6 +68,49 @@ export interface Flashcard {
   difficulty: number
   last_reviewed?: string
   created_at: string
+  flashcard_type: string
+  context_notes?: string[]
+  tags?: string[]
+  review_count: number
+  mastery_level: number
+  last_performance?: number
+}
+
+export interface FlashcardSRSData {
+  flashcard_id: string
+  efactor: number
+  interval_days: number
+  due_date: string
+  repetitions: number
+  next_review_date: string
+}
+
+export interface FlashcardSetInfo {
+  id: string
+  mode: string
+  seed_note_id: string
+  neighbor_note_ids: string[]
+  created_at: string
+  flashcard_count: number
+}
+
+export interface FlashcardReviewResult {
+  flashcard_id: string
+  ai_score: number
+  verdict: string
+  feedback: string
+  missing_points: string[]
+  confidence: number
+  next_review_date: string
+  srs_data: FlashcardSRSData
+  tags_updated: string[]
+}
+
+export interface FlashcardGenerationResponse {
+  flashcard_set_id: string
+  cards: Flashcard[]
+  context_notes: string[]
+  total_tokens_used?: number
 }
 
 export interface GraphNode {
@@ -220,15 +252,14 @@ class APIClient {
   }
 
   // Auth endpoints
-  async register(email: string, password: string) {
+  async register(email: string, password: string, username: string) {
     const response = await this.request<{ access_token: string; user: User }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, username }),
     })
     
-    this.setToken(response.access_token)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(response.user))
+    if (response.access_token) {
+      this.setToken(response.access_token)
     }
     
     return response
@@ -240,9 +271,21 @@ class APIClient {
       body: JSON.stringify({ email, password }),
     })
     
-    this.setToken(response.access_token)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(response.user))
+    if (response.access_token) {
+      this.setToken(response.access_token)
+    }
+    
+    return response
+  }
+
+  async googleAuth(code: string) {
+    const response = await this.request<{ access_token: string; user: User }>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+    
+    if (response.access_token) {
+      this.setToken(response.access_token)
     }
     
     return response
@@ -255,6 +298,14 @@ class APIClient {
 
   async getNote(id: string): Promise<Note> {
     return this.request(`/notes/${id}`)
+  }
+
+  async getSuggestedKeywords(noteId: string): Promise<{ note_id: string; keywords: string[] }> {
+    return this.request(`/notes/${noteId}/keywords`)
+  }
+
+  async getBacklinks(noteId: string): Promise<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>> {
+    return this.request(`/notes/${noteId}/backlinks`)
   }
 
   async createNote(title: string, content: string): Promise<Note> {
@@ -274,6 +325,13 @@ class APIClient {
   async deleteNote(id: string): Promise<void> {
     await this.request(`/notes/${id}`, {
       method: 'DELETE',
+    })
+  }
+
+  async updateTags(noteId: string, tags: string[]): Promise<Note> {
+    return this.request(`/notes/${noteId}/tags`, {
+      method: 'PUT',
+      body: JSON.stringify({ tags }),
     })
   }
 
@@ -309,6 +367,103 @@ class APIClient {
     })
   }
 
+  // Enhanced flashcard endpoints
+  async getUserFlashcards(tags?: string[], search?: string): Promise<Flashcard[]> {
+    const params = new URLSearchParams()
+    if (tags && tags.length > 0) {
+      params.append('tags', tags.join(','))
+    }
+    if (search && search.trim()) {
+      params.append('search', search.trim())
+    }
+    
+    const url = params.toString() ? `/flashcards/user?${params.toString()}` : '/flashcards/user'
+    return this.request(url)
+  }
+
+  async getDueFlashcards(limit: number = 20): Promise<Flashcard[]> {
+    return this.request(`/flashcards/due?limit=${limit}`)
+  }
+
+  async reviewFlashcard(flashcardId: string, userAnswer: string, performanceScore?: number): Promise<{ message: string; performance_score: number; feedback: string; mastery_level: number; next_review_date?: string; tags_updated: string[] }> {
+    return this.request(`/flashcards/${flashcardId}/review`, {
+      method: 'POST',
+      body: JSON.stringify({
+        flashcard_id: flashcardId,
+        user_answer: userAnswer,
+        performance_score: performanceScore
+      }),
+    })
+  }
+
+  async addFlashcardTag(flashcardId: string, tag: string): Promise<{ message: string; tags: string[] }> {
+    return this.request(`/flashcards/${flashcardId}/tags/${tag}`, {
+      method: 'POST',
+    })
+  }
+
+  async removeFlashcardTag(flashcardId: string, tag: string): Promise<{ message: string; tags: string[] }> {
+    return this.request(`/flashcards/${flashcardId}/tags/${tag}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async generateContextualFlashcards(noteId: string, count: number = 10): Promise<Flashcard[]> {
+    return this.request(`/notes/${noteId}/flashcards/contextual/generate?count=${count}`, {
+      method: 'POST',
+    })
+  }
+
+  // Enhanced flashcard system endpoints
+  async generateFlashcardsEnhanced(
+    mode: 'single' | 'context',
+    noteId: string,
+    count?: number,
+    neighbors?: number,
+    tokenCap?: number
+  ): Promise<FlashcardGenerationResponse> {
+    return this.request('/flashcards/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        mode,
+        note_id: noteId,
+        count,
+        neighbors,
+        token_cap: tokenCap
+      }),
+    })
+  }
+
+  async reviewFlashcardEnhanced(
+    flashcardId: string,
+    typedAnswer: string,
+    qualityRating?: number
+  ): Promise<FlashcardReviewResult> {
+    return this.request(`/flashcards/${flashcardId}/review/enhanced`, {
+      method: 'POST',
+      body: JSON.stringify({
+        flashcard_id: flashcardId,
+        typed_answer: typedAnswer,
+        quality_rating: qualityRating
+      }),
+    })
+  }
+
+  async getFlashcardSets(): Promise<FlashcardSetInfo[]> {
+    return this.request('/flashcards/sets')
+  }
+
+  async getDueFlashcardsSRS(limit: number = 20): Promise<Flashcard[]> {
+    return this.request(`/flashcards/due/srs?limit=${limit}`)
+  }
+
+  async archiveMasteredFlashcards(minRepetitions: number = 3): Promise<{ message: string; flashcards: Array<{ id: string; question: string; tags: string[] }> }> {
+    return this.request('/flashcards/archive/mastered', {
+      method: 'POST',
+      body: JSON.stringify({ min_repetitions: minRepetitions }),
+    })
+  }
+
   // Graph endpoint
   async getNotesGraph(): Promise<GraphData> {
     return this.request('/graph')
@@ -333,10 +488,17 @@ class APIClient {
     return this.request('/api/settings/profile')
   }
 
-  async updateProfileSettings(updates: Partial<UserProfileUpdate>): Promise<User> {
+  async updateProfileSettings(data: UserProfileUpdate): Promise<User> {
     return this.request('/api/settings/profile', {
       method: 'PATCH',
-      body: JSON.stringify(updates),
+      body: JSON.stringify(data),
+    })
+  }
+
+  async sendEmailChangeVerification(newEmail: string): Promise<{ message: string }> {
+    return this.request('/auth/send-email-change-verification', {
+      method: 'POST',
+      body: JSON.stringify({ new_email: newEmail }),
     })
   }
 
@@ -396,6 +558,20 @@ class APIClient {
     return this.request('/api/settings/advanced', {
       method: 'PATCH',
       body: JSON.stringify(settings),
+    })
+  }
+
+  // Account deletion
+  async requestAccountDeletion(): Promise<{ message: string }> {
+    return this.request('/auth/request-account-deletion', {
+      method: 'POST',
+    })
+  }
+
+  async confirmAccountDeletion(token: string): Promise<{ message: string }> {
+    return this.request('/auth/confirm-account-deletion', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     })
   }
 }

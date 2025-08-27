@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type Note, type User, APIError } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Plus, FileText, Zap, Network, Search, FolderOpen } from 'lucide-react'
+import { Plus, FileText, Network, Search, FolderOpen, ArrowLeft } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 
@@ -27,6 +27,7 @@ export default function Home() {
   const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([])
   const [backlinks, setBacklinks] = useState<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>>([])
   const [tagsSaving, setTagsSaving] = useState(false)
+  const [navHistory, setNavHistory] = useState<string[]>([])
 
   useEffect(() => {
     // Check for existing auth
@@ -133,12 +134,38 @@ export default function Home() {
   const transformWikiLinksToMarkdown = (text: string): string =>
     text.replace(/\[\[([^\[\]]+)\]\]/g, (_m, p1) => `[${p1}](#note=${encodeURIComponent(String(p1).trim())})`)
 
+  const navigateToNote = (note: Note) => {
+    if (selectedNote && selectedNote.id !== note.id) {
+      setNavHistory((prev) => [...prev, selectedNote.id])
+    }
+    setSelectedNote(note)
+    setCurrentView('notes')
+    if (typeof window !== 'undefined') {
+      window.location.hash = `note=${encodeURIComponent(note.title)}`
+    }
+  }
+
   const navigateToTitle = (title: string) => {
     const target = notes.find(n => n.title.toLowerCase() === title.toLowerCase())
     if (target) {
-      setSelectedNote(target)
-      setCurrentView('notes')
+      navigateToNote(target)
     }
+  }
+
+  const goBack = () => {
+    setNavHistory((prev) => {
+      if (prev.length === 0) return prev
+      const next = prev.slice(0, -1)
+      const prevId = prev[prev.length - 1]
+      const prevNote = notes.find(n => n.id === prevId)
+      if (prevNote) {
+        setSelectedNote(prevNote)
+        if (typeof window !== 'undefined') {
+          window.location.hash = `note=${encodeURIComponent(prevNote.title)}`
+        }
+      }
+      return next
+    })
   }
 
   const selectFromHash = () => {
@@ -213,8 +240,7 @@ export default function Home() {
   const handleGraphNodeClick = (nodeId: string) => {
     const note = notes.find(n => n.id === nodeId)
     if (note) {
-      setSelectedNote(note)
-      setCurrentView('notes')
+      navigateToNote(note)
     }
   }
 
@@ -281,6 +307,7 @@ export default function Home() {
               onEdit={handleEditNote}
               onDelete={handleDeleteNote}
               onSelect={handleSelectNote}
+              selectedNoteId={selectedNote?.id}
             />
           </div>
         </div>
@@ -294,11 +321,6 @@ export default function Home() {
               onCancel={() => setCurrentView('notes')}
               onNavigateByTitle={navigateToTitle}
             />
-          ) : currentView === 'flashcards' && selectedNote ? (
-            <FlashcardViewer
-              note={selectedNote}
-              onClose={() => setCurrentView('notes')}
-            />
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
               {/* Top Toolbar */}
@@ -311,6 +333,10 @@ export default function Home() {
                           <FileText className="h-4 w-4" />
                           <span>Notes</span>
                         </TabsTrigger>
+                        <TabsTrigger value="flashcards" className="flex items-center space-x-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">
+                          <img src="/flashcards-icon.svg" alt="Flashcards" className="h-4 w-4" />
+                          <span>Flashcards</span>
+                        </TabsTrigger>
                         <TabsTrigger value="graph" className="flex items-center space-x-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">
                           <Network className="h-4 w-4" />
                           <span>Graph</span>
@@ -321,6 +347,17 @@ export default function Home() {
 
                   {selectedNote && currentView === 'notes' && (
                     <div className="flex items-center space-x-2">
+                      {navHistory.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={goBack}
+                          className="border-gray-200 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:bg-[#0f1318] dark:hover:bg-[#1d2430]"
+                        >
+                          <ArrowLeft className="h-4 w-4 mr-1" />
+                          Back
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -337,7 +374,7 @@ export default function Home() {
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/icons/flashcards-icon.svg" alt="Flashcards" className="h-4 w-4" />
-                        <span>Flashcards</span>
+                        <span>Generate Flashcards</span>
                       </Button>
                     </div>
                   )}
@@ -444,78 +481,116 @@ export default function Home() {
                                         setSelectedNote(target)
                                       }
                                     }}
-                                    className="w-full text-left text-sm p-2 rounded hover:bg-gray-100 dark:hover:bg-[#0f1115]"
+                                    className="block w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-[#1d2430] text-sm"
                                   >
-                                    <div className="font-medium text-gray-900 truncate dark:text-gray-100">{b.title}</div>
+                                    <div className="font-medium text-gray-900 dark:text-gray-100">{b.title}</div>
                                     {b.excerpt && (
-                                      <div className="text-gray-500 truncate dark:text-gray-400">{b.excerpt}</div>
+                                      <div className="text-gray-600 dark:text-gray-400 text-xs mt-1 line-clamp-2">
+                                        <ReactMarkdown
+                                          remarkPlugins={[remarkGfm]}
+                                          components={{
+                                            a: ({ href, children, ...props }) => {
+                                              if (href && href.startsWith('#note=')) {
+                                                const title = decodeURIComponent(href.replace('#note=', ''))
+                                                return (
+                                                  <a
+                                                    href={href}
+                                                    className="text-orange-600 underline dark:text-orange-400"
+                                                    onClick={(e) => {
+                                                      e.preventDefault()
+                                                      if (typeof window !== 'undefined') {
+                                                        window.location.hash = `note=${encodeURIComponent(title)}`
+                                                      }
+                                                      navigateToTitle(title)
+                                                    }}
+                                                    {...props}
+                                                  >
+                                                    {children}
+                                                  </a>
+                                                )
+                                              }
+                                              return (
+                                                <a
+                                                  href={href}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="text-orange-600 underline dark:text-orange-400"
+                                                  {...props}
+                                                >
+                                                  {children}
+                                                </a>
+                                              )
+                                            },
+                                            p: ({ children }) => <span className="leading-relaxed">{children}</span>,
+                                            img: () => null,
+                                            h1: ({ children }) => <span className="font-semibold">{children}</span>,
+                                            h2: ({ children }) => <span className="font-semibold">{children}</span>,
+                                            h3: ({ children }) => <span className="font-semibold">{children}</span>,
+                                          }}
+                                        >
+                                          {transformWikiLinksToMarkdown(b.excerpt)}
+                                        </ReactMarkdown>
+                                      </div>
                                     )}
                                   </button>
                                 ))}
                               </div>
                             )}
                           </div>
-
-                          <Separator />
-
-                          {/* Tags and suggested keywords */}
-                          <div>
-                            <h3 className="font-medium text-gray-900 mb-2 dark:text-gray-100">Tags</h3>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {(selectedNote.tags || []).length === 0 ? (
-                                <p className="text-sm text-gray-500 dark:text-gray-400">No tags</p>
-                              ) : (
-                                (selectedNote.tags || []).map((t) => (
-                                  <span key={t} className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded text-xs dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900/40">
-                                    {t}
-                                    <button
-                                      type="button"
-                                      title="Remove tag"
-                                      className="text-orange-700 hover:text-orange-900 dark:text-orange-300 dark:hover:text-orange-200"
-                                      onClick={() => removeTag(t)}
-                                      disabled={tagsSaving}
-                                    >
-                                      ×
-                                    </button>
-                                  </span>
-                                ))
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1 dark:text-gray-400">Suggested</div>
-                              {suggestedKeywords.length === 0 ? (
-                                <p className="text-sm text-gray-500 dark:text-gray-400">No suggestions</p>
-                              ) : (
-                                <div className="flex flex-wrap gap-2">
-                                  {suggestedKeywords.map((k) => (
-                                    <button
-                                      key={k}
-                                      type="button"
-                                      onClick={() => addTag(k)}
-                                      disabled={tagsSaving}
-                                      className="text-xs px-2 py-0.5 border border-gray-200 rounded hover:bg-gray-100 dark:border-[#232a36] dark:hover:bg-[#0f1115] dark:text-gray-100"
-                                      title="Add tag"
-                                    >
-                                      + {k}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Select a note</h3>
-                        <p className="text-gray-600">Choose a note from the sidebar to view its content.</p>
+                      <div className="text-center text-gray-500 dark:text-gray-400">
+                        <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <h3 className="text-lg font-medium mb-2">No note selected</h3>
+                        <p>Select a note from the sidebar to view its content</p>
                       </div>
                     </div>
                   )
                 )}
+
+                  {/* Flashcards Tab */}
+                  {currentView === 'flashcards' && (
+                    <div className="h-full p-6 overflow-y-auto">
+                      <div className="max-w-4xl mx-auto">
+                        {selectedNote ? (
+                          <FlashcardViewer 
+                            noteId={selectedNote.id} 
+                            onFlashcardCreated={(flashcard) => { console.log('Flashcard created:', flashcard); }} 
+                          />
+                        ) : (
+                          <div className="text-center mb-8">
+                            <div className="w-16 h-16 mx-auto mb-4">
+                              <img src="/icons/flashcards-icon.svg" alt="Flashcards" className="w-full h-full" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                              Flashcard Studio
+                            </h2>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                              Study and review your knowledge with AI-powered flashcards
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                              <Button 
+                                onClick={() => window.location.href = '/flashcards'}
+                                className="bg-orange-600 hover:bg-orange-700"
+                              >
+                                Go to Flashcards
+                              </Button>
+                              <Button 
+                                variant="outline"
+                                onClick={() => setCurrentView('notes')}
+                                className="border-gray-200 dark:border-[#232a36] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1d2430]"
+                              >
+                                Select Note
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                 {currentView === 'graph' && (
                   <NotesGraph onNodeClick={handleGraphNodeClick} highlightNodeIds={filteredNotes.map(n=>n.id)} />

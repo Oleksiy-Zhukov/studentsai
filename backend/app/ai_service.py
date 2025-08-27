@@ -104,12 +104,40 @@ class AIService:
             import json
 
             try:
-                flashcards_data = json.loads(response_text)
-                flashcards = [
-                    GeneratedFlashcard(question=card["question"], answer=card["answer"])
-                    for card in flashcards_data
-                ]
-                return flashcards
+                decoded = json.loads(response_text)
+
+                # Some models wrap the list, e.g. {"flashcards": [...]} or {"cards": [...]}
+                if isinstance(decoded, dict):
+                    if isinstance(decoded.get("flashcards"), list):
+                        flashcards_data = decoded["flashcards"]
+                    elif isinstance(decoded.get("cards"), list):
+                        flashcards_data = decoded["cards"]
+                    else:
+                        # Unexpected dict shape; fallback
+                        return self._parse_flashcards_fallback(response_text, count)
+                elif isinstance(decoded, list):
+                    flashcards_data = decoded
+                else:
+                    # Unsupported top-level type; fallback
+                    return self._parse_flashcards_fallback(response_text, count)
+
+                # Normalize items; ignore malformed entries gracefully
+                normalized: List[GeneratedFlashcard] = []
+                for item in flashcards_data:
+                    if isinstance(item, dict):
+                        q = item.get("question")
+                        a = item.get("answer")
+                        if isinstance(q, str) and isinstance(a, str):
+                            normalized.append(GeneratedFlashcard(question=q, answer=a))
+                    elif isinstance(item, list) and len(item) >= 2:
+                        q, a = item[0], item[1]
+                        if isinstance(q, str) and isinstance(a, str):
+                            normalized.append(GeneratedFlashcard(question=q, answer=a))
+
+                if not normalized:
+                    return self._parse_flashcards_fallback(response_text, count)
+
+                return normalized[:count]
             except json.JSONDecodeError:
                 # Fallback: extract Q&A pairs manually
                 return self._parse_flashcards_fallback(response_text, count)
@@ -279,3 +307,48 @@ async def generate_flashcards_from_content(
 def calculate_note_similarities(notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Calculate similarities between notes"""
     return ai_service.find_note_connections(notes)
+
+
+async def evaluate_answer_with_llm(prompt: str) -> str:
+    """
+    Evaluate a student's answer using LLM for intelligent scoring.
+    This is a premium feature for paid users.
+    """
+    try:
+        # TODO: Implement actual LLM call (OpenAI, Anthropic, etc.)
+        # For now, return a mock response to test the system
+
+        # Mock LLM response - replace with actual API call
+        mock_response = {
+            "score": 85,
+            "quality_rating": 4,
+            "verdict": "correct",
+            "feedback": "Excellent understanding demonstrated! You've covered the key concepts well and shown good comprehension of the material.",
+            "key_points_covered": 4,
+            "key_points_missing": ["minor detail about timing"],
+            "confidence": 88,
+        }
+
+        import json
+
+        return json.dumps(mock_response)
+
+    except Exception as e:
+        from .config import DEBUG
+
+        if DEBUG:
+            print(f"LLM evaluation failed: {e}")
+        # Return fallback response
+        fallback_response = {
+            "score": 60,
+            "quality_rating": 3,
+            "verdict": "partial",
+            "feedback": "AI evaluation temporarily unavailable. Using fallback scoring.",
+            "key_points_covered": 2,
+            "key_points_missing": ["several key concepts"],
+            "confidence": 50,
+        }
+
+        import json
+
+        return json.dumps(fallback_response)

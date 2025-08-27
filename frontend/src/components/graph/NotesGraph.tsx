@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { select, type Selection } from 'd3-selection'
+import { select, type Selection, type ValueFn } from 'd3-selection'
 import { zoom, type D3ZoomEvent } from 'd3-zoom'
 import { drag, type D3DragEvent } from 'd3-drag'
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, type SimulationNodeDatum, type SimulationLinkDatum, type ForceLink, type Simulation, type ForceCollide } from 'd3-force'
@@ -15,6 +15,8 @@ import { Separator } from '@/components/ui/separator'
 interface NotesGraphProps {
   onNodeClick: (nodeId: string) => void
   highlightNodeIds?: string[]
+  mode?: 'full' | 'mini'
+  anchorNodeId?: string
 }
 
 // Extend GraphNode with D3.js simulation properties
@@ -33,7 +35,7 @@ interface GraphSimulationLink extends SimulationLinkDatum<GraphSimulationNode> {
   connection_type: string
 }
 
-export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphProps) {
+export function NotesGraph({ onNodeClick, highlightNodeIds = [], mode = 'full', anchorNodeId }: NotesGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const nodesSelRef = useRef<Selection<SVGCircleElement, unknown, null, undefined> | null>(null)
   const linksSelRef = useRef<Selection<SVGLineElement, unknown, null, undefined> | null>(null)
@@ -46,30 +48,30 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [interactionMode, setInteractionMode] = useState<'repel' | 'attract'>('repel')
+  const [interactionMode] = useState<'repel' | 'attract'>('repel')
   const interactionModeRef = useRef<'repel' | 'attract'>(interactionMode)
   const isDraggingRef = useRef<boolean>(false)
 
   // UX controls (inspired by Obsidian)
   // Local/Depth controls temporarily hidden per UX feedback
-  const [localMode] = useState<boolean>(false)
-  const [depth] = useState<number>(1)
+  const [localMode, setLocalMode] = useState<boolean>(false)
+  const [depth, setDepth] = useState<number>(1)
   const [hideIsolated, setHideIsolated] = useState<boolean>(true)
   const [focusSet, setFocusSet] = useState<Set<string>>(new Set())
-  const [collapsedSet, setCollapsedSet] = useState<Set<string>>(new Set())
+  const [collapsedSet] = useState<Set<string>>(new Set())
 
   // Adjustable forces (defaults provided by user)
-  const [centerForce, setCenterForce] = useState<number>(0.65)
-  const [repelForce, setRepelForce] = useState<number>(12.4)
-  const [linkForce, setLinkForce] = useState<number>(0.91)
+  const [centerForce] = useState<number>(0.65)
+  const [repelForce] = useState<number>(12.4)
+  const [linkForce] = useState<number>(0.91)
   const [linkDistance, setLinkDistance] = useState<number>(30)
   const [nodeSizeBase, setNodeSizeBase] = useState<number>(0.51)
   const [linkThicknessMul, setLinkThicknessMul] = useState<number>(0.1)
   const [colorCoded, setColorCoded] = useState<boolean>(false)
-  const [showLabels, setShowLabels] = useState<boolean>(false)
+  const [showLabels, setShowLabels] = useState<boolean>(mode === 'mini' ? true : false)
+  const [, setThemeKey] = useState<number>(0)
 
-  // Compute highlight set from props
-  const highlightSet = useMemo(() => new Set((highlightNodeIds || []).map(String)), [highlightNodeIds])
+  // highlight ids are used directly where needed
 
   useEffect(() => {
     interactionModeRef.current = interactionMode
@@ -101,9 +103,9 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
       setError('')
       const data = await api.getNotesGraph()
       setGraphData(data)
-      // initialize local focus with first node for localMode
-      if (data?.nodes?.length) {
-        setFocusSet(new Set([String(data.nodes[0].id)]))
+      // initialize local focus with first node only in full mode to avoid mini picking random
+      if (mode !== 'mini' && data?.nodes?.length) {
+        setFocusSet((prev) => (prev.size === 0 ? new Set([String(data.nodes[0].id)]) : prev))
       }
     } catch (err) {
       console.error('Failed to load graph data:', err)
@@ -121,10 +123,51 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
     loadGraphData()
   }, [])
 
+  // When in mini mode, always focus on anchor node and its immediate neighbors
+  useEffect(() => {
+    if (mode !== 'mini' || !anchorNodeId) return
+    setLocalMode(true)
+    setHideIsolated(true)
+    setDepth(1)
+    setFocusSet(new Set([String(anchorNodeId)]))
+    // Force labels on in mini mode
+    setShowLabels(true)
+  }, [mode, anchorNodeId])
+
   // Compute local view subgraph (BFS from focusSet up to depth), apply collapsed/hide-isolated
   const { viewNodes, viewLinks } = useMemo(() => {
     if (!graphData) return { viewNodes: [] as GraphNode[], viewLinks: [] as GraphConnection[] }
     const idToNode = new Map(graphData.nodes.map(n => [String(n.id), n]))
+    // Mini mode: return connected component of anchorNodeId
+    if (mode === 'mini' && anchorNodeId) {
+      const start = String(anchorNodeId)
+      const adj = new Map<string, Set<string>>()
+      for (const l of graphData.connections) {
+        const a = String(l.source_id), b = String(l.target_id)
+        if (!adj.has(a)) adj.set(a, new Set())
+        if (!adj.has(b)) adj.set(b, new Set())
+        adj.get(a)!.add(b)
+        adj.get(b)!.add(a)
+      }
+      const visited = new Set<string>()
+      const queue: string[] = []
+      if (idToNode.has(start)) {
+        visited.add(start)
+        queue.push(start)
+      }
+      while (queue.length) {
+        const cur = queue.shift() as string
+        const nbrs = adj.get(cur)
+        if (!nbrs) continue
+        for (const nb of nbrs) {
+          if (!visited.has(nb)) { visited.add(nb); queue.push(nb) }
+        }
+      }
+      const nodes = Array.from(visited).map(id => idToNode.get(id)!).filter(Boolean)
+      const nodeSet = new Set(nodes.map(n => String(n.id)))
+      const links = graphData.connections.filter(c => nodeSet.has(String(c.source_id)) && nodeSet.has(String(c.target_id)))
+      return { viewNodes: nodes, viewLinks: links }
+    }
     if (!localMode || focusSet.size === 0) {
       // full graph, optionally hide isolated
       const linkPairs = graphData.connections
@@ -224,8 +267,9 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
 
     // Responsive sizing based on container width
     const parent = (svgRef.current.parentElement as HTMLElement) || document.body
-    const width = Math.max(600, parent.clientWidth)
-    const height = 600
+    const width = mode === 'mini' ? Math.max(260, parent.clientWidth) : Math.max(600, parent.clientWidth)
+    const dynamicHeight = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 600
+    const height = mode === 'mini' ? 220 : Math.max(600, dynamicHeight)
     const margin = { top: 20, right: 20, bottom: 20, left: 20 }
 
     svg
@@ -244,7 +288,7 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
       .attr('transform', `translate(${margin.left},${margin.top})`)
 
     // Node radius helper
-    const nodeRadius = (d: GraphSimulationNode) => {
+    const nodeRadius = (_d: GraphSimulationNode) => {
       const base = Math.max(4, 8 * nodeSizeBase)
       return base
     }
@@ -299,7 +343,7 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
       .attr('r', (d: GraphSimulationNode) => nodeRadius(d))
       .attr('fill', isDark ? '#fb923c' : '#f97316')
       .attr('stroke', isDark ? '#f97316' : '#ea580c')
-      .attr('stroke-width', 2)
+      .attr('stroke-width', mode === 'mini' ? 1.5 : 2)
       .style('cursor', 'pointer')
       .call(drag<SVGCircleElement, GraphSimulationNode>()
         .on('start', (event: D3DragEvent<SVGCircleElement, GraphSimulationNode, GraphSimulationNode | undefined>, d: GraphSimulationNode) => {
@@ -349,21 +393,21 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
       .enter()
       .append('text')
       .text((d: GraphSimulationNode) => (d.title || 'Untitled').length > 20 ? (d.title || 'Untitled').substring(0, 20) + '...' : (d.title || 'Untitled'))
-      .attr('font-size', '12px')
+      .attr('font-size', mode === 'mini' ? '10px' : '12px')
       .attr('font-family', 'system-ui, sans-serif')
-      .attr('fill', '#374151')
-      .attr('stroke', '#ffffff')
-      .attr('stroke-width', 2)
+      .attr('fill', isDark ? '#ffffff' : '#374151')
+      .attr('stroke', isDark ? 'none' : '#ffffff')
+      .attr('stroke-width', isDark ? 0 : 2)
       .style('paint-order', 'stroke')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
       .style('pointer-events', 'none')
-      .style('opacity', showLabels ? 1 : 0)
+      .style('opacity', mode === 'mini' ? 0 : (showLabels ? 1 : 0))
 
     // Save selections for incremental updates
-    nodesSelRef.current = nodes as any
-    linksSelRef.current = links as any
-    labelsSelRef.current = labels as any
+    nodesSelRef.current = nodes as unknown as Selection<SVGCircleElement, unknown, null, undefined>
+    linksSelRef.current = links as unknown as Selection<SVGLineElement, unknown, null, undefined>
+    labelsSelRef.current = labels as unknown as Selection<SVGTextElement, unknown, null, undefined>
 
     // Add tooltips (clean any existing first) and configure interactions
     select('body').selectAll('div.tooltip').remove()
@@ -512,7 +556,7 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
     if (!nodes || !links || !labels) return
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
     const linkBase = isDark ? '#ffffff' : '#334155'
-    const setStrokeColor = (d: any) => (colorCoded && d.connection_type === 'manual' ? (isDark ? '#f59e0b' : '#f97316') : linkBase)
+    const setStrokeColor = (d: GraphSimulationLink) => (colorCoded && d.connection_type === 'manual' ? (isDark ? '#f59e0b' : '#f97316') : linkBase)
 
     const ids = new Set((highlightNodeIds || []).map(String))
     const hasAny = (() => {
@@ -521,43 +565,54 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
       return false
     })()
     if (ids.size === 0) {
-      nodes.style('opacity', 1)
-      labels.style('opacity', showLabels ? 1 : 0)
+      const nodeOpacityAll: ValueFn<SVGCircleElement, unknown, number> = () => 1
+      const labelOpacityAll: ValueFn<SVGTextElement, unknown, number> = () => (showLabels ? 1 : 0)
+      const linkStrokeColorFn: ValueFn<SVGLineElement, unknown, string> = (d) => setStrokeColor(d as unknown as GraphSimulationLink)
+      nodes.style('opacity', nodeOpacityAll)
+      labels.style('opacity', labelOpacityAll)
       links
-        .attr('stroke', setStrokeColor as any)
+        .attr('stroke', linkStrokeColorFn)
         .attr('stroke-opacity', 1)
       return
     }
     if (!hasAny) {
-      // No matches in current view → reset to default; avoid dimming all
-      nodes.style('opacity', 1)
-      labels.style('opacity', showLabels ? 1 : 0)
+      const nodeOpacityAll: ValueFn<SVGCircleElement, unknown, number> = () => 1
+      const labelOpacityAll: ValueFn<SVGTextElement, unknown, number> = () => (showLabels ? 1 : 0)
+      const linkStrokeColorFn: ValueFn<SVGLineElement, unknown, string> = (d) => setStrokeColor(d as unknown as GraphSimulationLink)
+      nodes.style('opacity', nodeOpacityAll)
+      labels.style('opacity', labelOpacityAll)
       links
-        .attr('stroke', setStrokeColor as any)
+        .attr('stroke', linkStrokeColorFn)
         .attr('stroke-opacity', 1)
       return
     }
     // Combine search highlight with hideIsolated logic without re-simulating
     // Build connected set from existing links data
-    const linkData: any[] = (links as any).data()
+    const linkData = (links as Selection<SVGLineElement, unknown, null, undefined>).data() as unknown as GraphSimulationLink[]
     const connected = new Set<string>()
     for (const l of linkData) { connected.add(String(l.source.id)); connected.add(String(l.target.id)) }
-    nodes.style('opacity', (d: any) => {
-      const idStr = String(d.id)
+    const nodeOpacityFn: ValueFn<SVGCircleElement, unknown, number> = (d) => {
+      const datum = d as unknown as GraphSimulationNode
+      const idStr = String(datum.id)
       if (hideIsolated && !connected.has(idStr)) return 0
       return ids.has(idStr) ? 1 : 0.25
-    })
-    labels.style('opacity', (d: any) => (ids.has(String(d.id)) ? 1 : (showLabels ? 1 : 0)))
+    }
+    const labelOpacityFn: ValueFn<SVGTextElement, unknown, number> = (d) => (ids.has(String((d as unknown as GraphSimulationNode).id)) ? 1 : (showLabels ? 1 : 0))
+    const linkOpacityFn: ValueFn<SVGLineElement, unknown, number> = (l) => (ids.has(String((l as unknown as GraphSimulationLink).source.id)) || ids.has(String((l as unknown as GraphSimulationLink).target.id)) ? 1 : 0.3)
+    const linkStrokeColorFn: ValueFn<SVGLineElement, unknown, string> = (d) => setStrokeColor(d as unknown as GraphSimulationLink)
+    nodes.style('opacity', nodeOpacityFn)
+    labels.style('opacity', labelOpacityFn)
     links
-      .attr('stroke-opacity', (l: any) => (ids.has(String(l.source.id)) || ids.has(String(l.target.id)) ? 1 : 0.3))
-      .attr('stroke', setStrokeColor as any)
+      .attr('stroke-opacity', linkOpacityFn)
+      .attr('stroke', linkStrokeColorFn)
   }, [highlightNodeIds, colorCoded, showLabels, hideIsolated])
 
   // Update edge thickness without full re-render to keep layout stable
   useEffect(() => {
-    const links = linksSelRef.current
+    const links = linksSelRef.current as Selection<SVGLineElement, unknown, null, undefined> | null
     if (!links) return
-    links.attr('stroke-width', (d: any) => 1 + Math.max(0.2, (d.similarity || 0)) * (3 * linkThicknessMul))
+    const widthFn: ValueFn<SVGLineElement, unknown, number> = (d) => 1 + Math.max(0.2, ((d as unknown as GraphSimulationLink).similarity || 0)) * (3 * linkThicknessMul)
+    links.attr('stroke-width', widthFn)
   }, [linkThicknessMul])
 
   // Incremental update: link distance
@@ -578,6 +633,16 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
     simulationRef.current.alphaTarget(0.15).restart()
     setTimeout(() => simulationRef.current && simulationRef.current.alphaTarget(0), 200)
   }, [nodeSizeBase])
+
+  // Auto-refresh graph when labels are toggled
+  useEffect(() => {
+    if (!graphData || !svgRef.current) return
+    // Trigger a re-render when showLabels changes to properly position labels
+    const cleanup = renderGraph()
+    return () => {
+      if (typeof cleanup === 'function') cleanup()
+    }
+  }, [showLabels, renderGraph])
 
   useEffect(() => {
     if (!graphData || !svgRef.current) return
@@ -670,19 +735,22 @@ export function NotesGraph({ onNodeClick, highlightNodeIds = [] }: NotesGraphPro
             </Button>
           </div>
         </div>
-        {/* Controls */}
-        <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-center text-xs text-gray-700 dark:text-gray-300">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={hideIsolated} onChange={(e) => setHideIsolated(e.target.checked)} /> Hide isolated</label>
-          <div className="flex items-center gap-2"><span>Distance</span><Input type="number" step={1} value={linkDistance} onChange={(e)=>setLinkDistance(Number(e.target.value)||0)} className="h-7 w-20 dark:bg-[#0f1318] dark:border-gray-700"/></div>
-          <div className="flex items-center gap-2"><span>Node size</span><Input type="number" step={0.01} value={nodeSizeBase} onChange={(e)=>setNodeSizeBase(Number(e.target.value)||0)} className="h-7 w-24 dark:bg-[#0f1318] dark:border-gray-700"/></div>
-          <div className="flex items-center gap-2"><span>Edge thickness</span><Input type="number" step={0.01} value={linkThicknessMul} onChange={(e)=>setLinkThicknessMul(Number(e.target.value)||0)} className="h-7 w-28 dark:bg-[#0f1318] dark:border-gray-700"/></div>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={colorCoded} onChange={(e)=>setColorCoded(e.target.checked)} /> Color coded</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={showLabels} onChange={(e)=>setShowLabels(e.target.checked)} /> Labels</label>
-        </div>
-        <Separator className="mt-3 dark:bg-[#232a36]" />
-        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-          Showing {viewNodes.length} nodes / {viewLinks.length} edges. Click a node to expand local view. Hover to reveal labels.
-        </p>
+        {mode !== 'mini' && (
+          <>
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-center text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={hideIsolated} onChange={(e) => setHideIsolated(e.target.checked)} /> Hide isolated</label>
+              <div className="flex items-center gap-2"><span>Distance</span><Input type="number" step={1} value={linkDistance} onChange={(e)=>setLinkDistance(Number(e.target.value)||0)} className="h-7 w-20 dark:bg-[#0f1318] dark:border-gray-700"/></div>
+              <div className="flex items-center gap-2"><span>Node size</span><Input type="number" step={0.01} value={nodeSizeBase} onChange={(e)=>setNodeSizeBase(Number(e.target.value)||0)} className="h-7 w-24 dark:bg-[#0f1318] dark:border-gray-700"/></div>
+              <div className="flex items-center gap-2"><span>Edge thickness</span><Input type="number" step={0.01} value={linkThicknessMul} onChange={(e)=>setLinkThicknessMul(Number(e.target.value)||0)} className="h-7 w-28 dark:bg-[#0f1318] dark:border-gray-700"/></div>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={colorCoded} onChange={(e)=>setColorCoded(e.target.checked)} /> Color coded</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={showLabels} onChange={(e)=>{ setShowLabels(e.target.checked); loadGraphData(); }} /> Labels</label>
+            </div>
+            <Separator className="mt-3 dark:bg-[#232a36]" />
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+              Showing {viewNodes.length} nodes / {viewLinks.length} edges. Click a node to expand local view. Hover to reveal labels.
+            </p>
+          </>
+        )}
       </CardHeader>
       <CardContent>
         <div className="w-full overflow-x-auto">

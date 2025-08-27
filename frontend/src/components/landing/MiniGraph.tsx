@@ -1,8 +1,26 @@
+'use client'
+
 import React, { useEffect, useRef } from 'react'
-import * as d3 from 'd3'
+import { select } from 'd3-selection'
+import { forceSimulation, forceLink, forceManyBody, forceX, forceY, forceCollide } from 'd3-force'
+import { drag } from 'd3-drag'
 
 interface MiniGraphProps {
   height?: number
+}
+
+interface Node {
+  id: number
+  cluster?: number
+  x?: number
+  y?: number
+  fx?: number | null
+  fy?: number | null
+}
+
+interface Link {
+  source: Node | number
+  target: Node | number
 }
 
 export default function MiniGraph({ height = 360 }: MiniGraphProps) {
@@ -15,8 +33,7 @@ export default function MiniGraph({ height = 360 }: MiniGraphProps) {
     const parent = (ref.current.parentElement as HTMLElement) || document.body
     const width = Math.max(420, parent.clientWidth)
 
-    const svg = d3
-      .select(ref.current)
+    const svg = select(ref.current)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .style('border-radius', '12px')
       .style('background', '#ffffff')
@@ -26,10 +43,13 @@ export default function MiniGraph({ height = 360 }: MiniGraphProps) {
     const clusterA = Math.floor(total * 0.45)
     const clusterB = total - clusterA
 
-    type NodeT = { id: number; cluster: number; x?: number; y?: number; vx?: number; vy?: number; fx?: number | null; fy?: number | null }
-    const nodes: NodeT[] = Array.from({ length: total }, (_, i) => ({ id: i, cluster: i < clusterA ? 0 : 1 }))
 
-    const links: Array<{ source: number; target: number }> = []
+    const nodes: Node[] = Array.from({ length: total }, (_, i) => ({ 
+      id: i, 
+      cluster: i < clusterA ? 0 : 1 
+    }))
+
+    const links: Link[] = []
     for (let i = 1; i < clusterA; i++) {
       const parentIdx = Math.floor(Math.random() * i)
       links.push({ source: parentIdx, target: i })
@@ -61,16 +81,15 @@ export default function MiniGraph({ height = 360 }: MiniGraphProps) {
     const cyB = height * 0.60
     const linkDist = Math.max(48, Math.min(width, height) * 0.17)
 
-    const simulation = d3
-      .forceSimulation(nodes as any)
+    const simulation = forceSimulation(nodes)
       .alpha(1)
       .alphaDecay(0.06)
       .velocityDecay(0.35)
-      .force('link', d3.forceLink(links as any).distance(linkDist).strength(0.95))
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('x', d3.forceX<NodeT>().x((d) => (d.cluster === 0 ? cxA : cxB)).strength(0.14))
-      .force('y', d3.forceY<NodeT>().y((d) => (d.cluster === 0 ? cyA : cyB)).strength(0.14))
-      .force('collide', d3.forceCollide<NodeT>().radius(8).iterations(1))
+      .force('link', forceLink(links).distance(linkDist).strength(0.95))
+      .force('charge', forceManyBody().strength(-200))
+      .force('x', forceX<Node>().x((d) => (d.cluster === 0 ? cxA : cxB)).strength(0.14))
+      .force('y', forceY<Node>().y((d) => (d.cluster === 0 ? cyA : cyB)).strength(0.14))
+      .force('collide', forceCollide<Node>().radius(8).iterations(1))
 
     const link = svg
       .append('g')
@@ -96,18 +115,17 @@ export default function MiniGraph({ height = 360 }: MiniGraphProps) {
       .attr('stroke-width', 1.2)
       .style('cursor', 'pointer')
       .call(
-        d3
-          .drag<SVGCircleElement, any>()
-          .on('start', (event, d) => {
+        drag<SVGCircleElement, Node>()
+          .on('start', (event, d: Node) => {
             if (!event.active) simulation.alphaTarget(0.3).restart()
             d.fx = d.x
             d.fy = d.y
           })
-          .on('drag', (event, d) => {
+          .on('drag', (event, d: Node) => {
             d.fx = event.x
             d.fy = event.y
           })
-          .on('end', (event, d) => {
+          .on('end', (event, d: Node) => {
             if (!event.active) simulation.alphaTarget(0)
             d.fx = null
             d.fy = null
@@ -115,20 +133,18 @@ export default function MiniGraph({ height = 360 }: MiniGraphProps) {
       )
 
     node
-      .on('mouseenter', function (_event, d: any) {
-        d3.select(this).transition().duration(150).attr('r', 7)
+      .on('mouseenter', function (_event, d: Node) {
+        select(this).attr('r', 7)
+        // Highlight connected links
         link
-          .transition()
-          .duration(150)
-          .attr('stroke', (l: any) => (l.source === d || l.target === d ? ORANGE : LINK_COLOR))
-          .attr('stroke-opacity', (l: any) => (l.source === d || l.target === d ? 0.95 : 0.25))
-          .attr('stroke-width', (l: any) => (l.source === d || l.target === d ? 1.6 : 1))
+          .attr('stroke', (l: Link) => (l.source === d || l.target === d ? ORANGE : LINK_COLOR))
+          .attr('stroke-opacity', (l: Link) => (l.source === d || l.target === d ? 0.95 : 0.25))
+          .attr('stroke-width', (l: Link) => (l.source === d || l.target === d ? 1.6 : 1))
       })
       .on('mouseleave', function () {
-        d3.select(this).transition().duration(150).attr('r', 5)
+        select(this).attr('r', 5)
+        // Reset link appearance
         link
-          .transition()
-          .duration(150)
           .attr('stroke', LINK_COLOR)
           .attr('stroke-opacity', 0.75)
           .attr('stroke-width', 1.2)
@@ -166,12 +182,12 @@ export default function MiniGraph({ height = 360 }: MiniGraphProps) {
 
     simulation.on('tick', () => {
       link
-        .attr('x1', (d: any) => d.source.x)
-        .attr('y1', (d: any) => d.source.y)
-        .attr('x2', (d: any) => d.target.x)
-        .attr('y2', (d: any) => d.target.y)
+        .attr('x1', (d: Link) => (d.source as Node).x ?? 0)
+        .attr('y1', (d: Link) => (d.source as Node).y ?? 0)
+        .attr('x2', (d: Link) => (d.target as Node).x ?? 0)
+        .attr('y2', (d: Link) => (d.target as Node).y ?? 0)
 
-      node.attr('cx', (d: any) => d.x).attr('cy', (d: any) => d.y)
+      node.attr('cx', (d: Node) => d.x ?? 0).attr('cy', (d: Node) => d.y ?? 0)
 
       // position labels above their nodes
       labels

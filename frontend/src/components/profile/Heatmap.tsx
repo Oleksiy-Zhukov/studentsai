@@ -15,6 +15,7 @@ interface HeatmapProps {
 
 export function Heatmap({ title = 'Activity', days }: HeatmapProps) {
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [tooltip, setTooltip] = useState<{ content: string; x: number; y: number } | null>(null)
 
   // Theme-aware color function
   const getColorClass = (bucket: number, isDark: boolean) => {
@@ -25,6 +26,18 @@ export function Heatmap({ title = 'Activity', days }: HeatmapProps) {
       const lightPalette = ['#f3f4f6', '#e5e7eb', '#d1d5db', '#fb923c', '#ea580c']
       return lightPalette[bucket]
     }
+  }
+
+  // Format date for tooltip display
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr + 'T00:00:00Z')
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
   }
 
   // Detect theme after component mounts
@@ -100,7 +113,7 @@ export function Heatmap({ title = 'Activity', days }: HeatmapProps) {
         </div>
         
         {/* Heatmap container that fills available space */}
-        <div className="w-full">
+        <div className="w-full relative">
           <div 
             className="flex gap-1 w-full" 
             role="grid" 
@@ -122,20 +135,46 @@ export function Heatmap({ title = 'Activity', days }: HeatmapProps) {
                 {col.map((d, ri) => (
                   <div
                     key={`${ci}-${ri}-${d.date}`}
-                    title={d.date ? `${d.date} • ${d.count} • ${d.top_type || ''}` : ''}
                     role="gridcell"
-                    aria-label={d.date ? `${d.date} ${d.count}` : ''}
-                    className="flex-1 min-h-[12px] rounded-sm ring-1 ring-gray-200 dark:ring-white/10 transition-colors hover:ring-2 hover:ring-orange-500/30"
+                    aria-label={d.date ? `${d.date} ${d.count} activities` : ''}
+                    className="flex-1 min-h-[12px] rounded-sm ring-1 ring-gray-200 dark:ring-white/10 transition-all duration-200 hover:ring-2 hover:ring-orange-500/50 hover:scale-110 cursor-pointer"
                     style={{ 
                       backgroundColor: getColorClass(bucket(d.count || 0), isDarkMode),
                       minHeight: '12px',
                       maxHeight: '16px'
                     }}
+                    onMouseEnter={(e) => {
+                      if (d.date) {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        const content = `${formatDate(d.date)}\n${d.count} activities${d.top_type ? `\nMost common: ${d.top_type}` : ''}`
+                        setTooltip({
+                          content,
+                          x: rect.left + rect.width / 2,
+                          y: rect.top - 10
+                        })
+                      }
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
                   />
                 ))}
               </div>
             ))}
           </div>
+
+          {/* GitHub-style tooltip */}
+          {tooltip && (
+            <div
+              className="fixed z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none whitespace-pre-line text-center"
+              style={{
+                left: tooltip.x,
+                top: tooltip.y,
+                transform: 'translateX(-50%) translateY(-100%)'
+              }}
+            >
+              {tooltip.content}
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+            </div>
+          )}
         </div>
         
         {/* Legend */}

@@ -97,11 +97,26 @@ def register_user(db: Session, user_data: UserCreate):
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
             )
 
+    # For password-based registration, password is required
+    if not user_data.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is required for registration",
+        )
+
     # Hash password and create user
     hashed_password = get_password_hash(user_data.password)
     username = getattr(user_data, "username", None)
     user = create_user(db, user_data.email, hashed_password, username)
 
+    return user
+
+
+def authenticate_oauth_user(db: Session, oauth_provider: str, oauth_id: str):
+    """Authenticate user via OAuth"""
+    user = get_user_by_oauth(db, oauth_provider, oauth_id)
+    if not user:
+        return False
     return user
 
 
@@ -134,7 +149,17 @@ def get_current_user(
 
 
 def get_current_user_id(current_user=Depends(get_current_user)) -> uuid.UUID:
-    """Get current user ID"""
+    """Get current user ID from JWT token"""
+    return current_user.id
+
+
+def get_verified_user_id(current_user=Depends(get_current_user)) -> uuid.UUID:
+    """Get current user ID and ensure they are verified"""
+    if not current_user.verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required. Please check your email and verify your account before accessing this feature.",
+        )
     return current_user.id
 
 

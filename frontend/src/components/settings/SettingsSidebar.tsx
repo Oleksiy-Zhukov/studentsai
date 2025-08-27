@@ -16,10 +16,10 @@ interface SettingsSidebarProps {
 const settingsTabs = [
   { id: 'profile', label: 'Profile', icon: User, description: 'Username, email, password' },
   { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme, font size, layout' },
-  { id: 'graph', label: 'Graph View', icon: Network, description: 'Edge thickness, node spacing' },
-  { id: 'ai', label: 'AI Features', icon: Brain, description: 'OpenAI usage, rate limits' },
-  { id: 'studyflow', label: 'Study Flow', icon: BookOpen, description: 'Quiz settings, flashcards' },
-  { id: 'advanced', label: 'Advanced', icon: Settings, description: 'Export, import, account' },
+  { id: 'graph', label: 'Graph View', icon: Network, description: 'Coming soon: customization options' },
+  { id: 'ai', label: 'AI Features', icon: Brain, description: 'Coming soon: smart study assistance' },
+  { id: 'studyflow', label: 'Study Flow', icon: BookOpen, description: 'Flashcard settings & learning' },
+  { id: 'advanced', label: 'Advanced', icon: Settings, description: 'Coming soon: export & analytics' },
 ]
 
 export function SettingsSidebar({ activeTab, onTabChange, searchQuery, onSearchChange }: SettingsSidebarProps) {

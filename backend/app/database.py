@@ -3,8 +3,8 @@ Database configuration and models for StudentsAI MVP
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict, Any, List
 
 from sqlalchemy import (
     create_engine,
@@ -16,12 +16,14 @@ from sqlalchemy import (
     Integer,
     ForeignKey,
     JSON,
+    Boolean,
 )
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.sql import func
 from sqlalchemy import text as sql_text
+from sqlalchemy import or_
 
 from .config import DATABASE_URL
 
@@ -42,7 +44,18 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, index=True, nullable=False)
     username = Column(String(50), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)  # Made nullable for OAuth users
+    verified = Column(
+        Boolean, default=False, nullable=False
+    )  # NEW: Email verification status
+    plan = Column(String(20), nullable=False, default="free")  # 'free' or 'pro'
+
+    # OAuth fields (NEW)
+    oauth_provider = Column(String(50), nullable=True)  # 'google', 'apple', etc.
+    oauth_id = Column(
+        String(255), nullable=True, unique=True, index=True
+    )  # OAuth provider's user ID
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -50,6 +63,29 @@ class User(Base):
 
     # Relationships
     notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
+    flashcards = relationship(
+        "Flashcard", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class PendingEmailChange(Base):
+    """Model for tracking pending email change requests"""
+
+    __tablename__ = "pending_email_changes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    current_email = Column(String(255), nullable=False)
+    new_email = Column(String(255), nullable=False)
+    current_email_verified = Column(Boolean, default=False, nullable=False)
+    new_email_verified = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+    # Relationships
+    user = relationship("User")
 
 
 class Note(Base):
@@ -138,7 +174,7 @@ class Event(Base):
 
 
 class Flashcard(Base):
-    """Flashcard model for spaced repetition"""
+    """Enhanced flashcard model for spaced repetition and contextual learning"""
 
     __tablename__ = "flashcards"
 
@@ -150,11 +186,94 @@ class Flashcard(Base):
     next_review = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # New fields for enhanced functionality
+    tags = Column(
+        ARRAY(String), nullable=True, default=list
+    )  # e.g., ["visit_later", "revisited", "recently_learned"]
+    review_count = Column(Integer, default=0)  # How many times reviewed
+    mastery_level = Column(Integer, default=0)  # 0-100, calculated from performance
+    last_performance = Column(Integer, nullable=True)  # Last review score (0-100)
+    flashcard_type = Column(
+        String(50), default="single_note"
+    )  # "single_note" or "contextual"
+    context_notes = Column(
+        ARRAY(UUID(as_uuid=True)), nullable=True
+    )  # For contextual flashcards
+    user_answer_history = Column(
+        JSON, nullable=True
+    )  # Store recent user answers for analysis
+
     # Foreign key
     note_id = Column(UUID(as_uuid=True), ForeignKey("notes.id"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )  # Direct user association
 
     # Relationships
     note = relationship("Note", back_populates="flashcards")
+    user = relationship("User", back_populates="flashcards")
+
+
+class FlashcardSRS(Base):
+    """Spaced repetition system data for flashcards using SM-2-lite algorithm"""
+
+    __tablename__ = "flashcard_srs"
+
+    flashcard_id = Column(
+        UUID(as_uuid=True), ForeignKey("flashcards.id"), primary_key=True
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    efactor = Column(Integer, default=250)  # E-Factor * 100 (2.5 -> 250)
+    interval_days = Column(Integer, default=1)
+    due_date = Column(Date, nullable=False)
+    repetitions = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    flashcard = relationship("Flashcard")
+
+
+class FlashcardSet(Base):
+    """Track context bundles for contextual flashcards"""
+
+    __tablename__ = "flashcard_sets"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    mode = Column(String(20), nullable=False)  # 'single' or 'context'
+    seed_note_id = Column(UUID(as_uuid=True), ForeignKey("notes.id"), nullable=False)
+    neighbor_note_ids = Column(ARRAY(UUID(as_uuid=True)), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+    seed_note = relationship("Note")
+
+
+class FlashcardReview(Base):
+    """Detailed review data for answer evaluation and feedback"""
+
+    __tablename__ = "flashcard_reviews"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    flashcard_id = Column(
+        UUID(as_uuid=True), ForeignKey("flashcards.id"), nullable=False
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    typed_answer = Column(Text, nullable=False)
+    ai_score = Column(Integer, nullable=True)  # 0-100 score from LLM
+    verdict = Column(String(20), nullable=True)  # 'correct', 'partial', 'incorrect'
+    feedback = Column(Text, nullable=True)
+    missing_points = Column(ARRAY(String), nullable=True)
+    confidence = Column(Integer, nullable=True)  # 0-100 confidence from LLM
+    reviewed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    flashcard = relationship("Flashcard")
+    user = relationship("User")
 
 
 class ActivityDaily(Base):
@@ -279,9 +398,14 @@ def get_user_by_id(db: Session, user_id: uuid.UUID) -> Optional[User]:
 
 
 def create_user(
-    db: Session, email: str, password_hash: str, username: str = None
+    db: Session,
+    email: str,
+    password_hash: str = None,
+    username: str = None,
+    oauth_provider: str = None,
+    oauth_id: str = None,
 ) -> User:
-    """Create new user"""
+    """Create new user (supports both password and OAuth)"""
     if username is None:
         # Generate a unique username if none provided
         import uuid
@@ -293,8 +417,60 @@ def create_user(
             username = f"{base_username}_{counter}"
             counter += 1
 
-    user = User(email=email, username=username, password_hash=password_hash)
+    user = User(
+        email=email,
+        username=username,
+        password_hash=password_hash,
+        oauth_provider=oauth_provider,
+        oauth_id=oauth_id,
+    )
     db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def get_user_by_oauth(
+    db: Session, oauth_provider: str, oauth_id: str
+) -> Optional[User]:
+    """Get user by OAuth provider and ID"""
+    return (
+        db.query(User)
+        .filter(User.oauth_provider == oauth_provider, User.oauth_id == oauth_id)
+        .first()
+    )
+
+
+def create_or_get_oauth_user(
+    db: Session, email: str, oauth_provider: str, oauth_id: str, username: str = None
+) -> User:
+    """Create new OAuth user or get existing one"""
+    # First try to find by OAuth ID
+    existing_user = get_user_by_oauth(db, oauth_provider, oauth_id)
+    if existing_user:
+        return existing_user
+
+    # Then try to find by email (in case user signed up with password first)
+    existing_user = get_user_by_email(db, email)
+    if existing_user:
+        # Link existing user to OAuth
+        existing_user.oauth_provider = oauth_provider
+        existing_user.oauth_id = oauth_id
+        existing_user.verified = True  # OAuth users are automatically verified
+        db.commit()
+        db.refresh(existing_user)
+        return existing_user
+
+    # Create new OAuth user
+    user = create_user(
+        db,
+        email=email,
+        username=username,
+        oauth_provider=oauth_provider,
+        oauth_id=oauth_id,
+    )
+    # OAuth sign-ups are considered verified (provider verified email)
+    user.verified = True
     db.commit()
     db.refresh(user)
     return user
@@ -388,10 +564,21 @@ def get_flashcards_by_note(db: Session, note_id: uuid.UUID):
 
 
 def create_flashcard(
-    db: Session, question: str, answer: str, note_id: uuid.UUID
+    db: Session,
+    question: str,
+    answer: str,
+    note_id: uuid.UUID,
+    user_id: uuid.UUID,
+    flashcard_type: str = "single_note",
 ) -> Flashcard:
     """Create new flashcard"""
-    flashcard = Flashcard(question=question, answer=answer, note_id=note_id)
+    flashcard = Flashcard(
+        question=question,
+        answer=answer,
+        note_id=note_id,
+        user_id=user_id,
+        flashcard_type=flashcard_type,
+    )
     db.add(flashcard)
     db.commit()
     db.refresh(flashcard)
@@ -468,13 +655,14 @@ def get_activity_counts(
     ).filter(
         Event.user_id == user_id,
         Event.occurred_at >= from_date_utc,
-        Event.occurred_at < to_date_utc,
+        Event.occurred_at <= to_date_utc,  # Changed from < to <= to include end date
     )
 
     if kind == "notes":
         q = q.filter(Event.event_type.in_(["NOTE_CREATED", "NOTE_REVIEWED"]))
     elif kind == "flashcards":
         q = q.filter(Event.event_type.in_(["FLASHCARD_CREATED", "FLASHCARD_REVIEWED"]))
+    # For "all" kind, don't filter by event type - include everything
 
     rows = q.group_by("day").order_by("day").all()
     return rows
@@ -488,7 +676,18 @@ def compute_streaks(db: Session, user_id: uuid.UUID):
         db.query(_func.date_trunc("day", Event.occurred_at).label("day"), _func.count())
         .filter(
             Event.user_id == user_id,
-            Event.event_type.in_(["NOTE_REVIEWED", "FLASHCARD_REVIEWED"]),
+            # Include ALL activity types for streak calculation, not just reviews
+            Event.event_type.in_(
+                [
+                    "NOTE_CREATED",
+                    "NOTE_REVIEWED",
+                    "NOTE_UPDATED",
+                    "FLASHCARD_CREATED",
+                    "FLASHCARD_REVIEWED",
+                    "FLASHCARD_UPDATED",
+                    "FLASHCARD_TAGGED",
+                ]
+            ),
         )
         .group_by("day")
         .order_by("day")
@@ -501,7 +700,7 @@ def compute_streaks(db: Session, user_id: uuid.UUID):
     days_set = set(days)
     from datetime import timedelta
 
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     # current streak
     cur = 0
     d = today
@@ -631,3 +830,338 @@ def get_similarities_for_notes(db: Session, note_ids: list[uuid.UUID]):
         )
         .all()
     )
+
+
+# Enhanced flashcard functions
+def get_user_flashcards(
+    db: Session,
+    user_id: uuid.UUID,
+    tags: Optional[List[str]] = None,
+    search: Optional[str] = None,
+) -> List[Flashcard]:
+    """Get all flashcards for a user, optionally filtered by tags and search query"""
+    query = db.query(Flashcard).filter(Flashcard.user_id == user_id)
+
+    # Filter by tags if provided
+    if tags:
+        query = query.filter(Flashcard.tags.overlap(tags))
+
+    # Filter by search query if provided
+    if search:
+        search_term = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                func.lower(Flashcard.question).like(search_term),
+                func.lower(Flashcard.answer).like(search_term),
+            )
+        )
+
+    return query.order_by(
+        Flashcard.next_review.asc().nullslast(), Flashcard.created_at.desc()
+    ).all()
+
+
+def get_flashcards_by_tag(db: Session, user_id: uuid.UUID, tag: str) -> List[Flashcard]:
+    """Get flashcards with a specific tag for a user"""
+    return (
+        db.query(Flashcard)
+        .filter(Flashcard.user_id == user_id, Flashcard.tags.contains([tag]))
+        .all()
+    )
+
+
+def update_flashcard_progress(
+    db: Session, flashcard_id: uuid.UUID, performance_score: int, user_answer: str
+) -> Flashcard:
+    """Update flashcard progress after review"""
+    flashcard = db.query(Flashcard).filter(Flashcard.id == flashcard_id).first()
+    if not flashcard:
+        raise ValueError("Flashcard not found")
+
+    # Update progress
+    flashcard.review_count += 1
+    flashcard.last_reviewed = datetime.now(timezone.utc)
+    flashcard.last_performance = performance_score
+
+    # Calculate new mastery level (simple algorithm - can be improved)
+    if performance_score >= 80:
+        flashcard.mastery_level = min(100, flashcard.mastery_level + 20)
+        # Mark as recently learned if mastery is high
+        if flashcard.mastery_level >= 80 and "recently_learned" not in flashcard.tags:
+            flashcard.tags = flashcard.tags + ["recently_learned"]
+    elif performance_score < 50:
+        flashcard.mastery_level = max(0, flashcard.mastery_level - 10)
+        # Remove recently learned tag if performance drops
+        if "recently_learned" in flashcard.tags:
+            flashcard.tags = [
+                tag for tag in flashcard.tags if tag != "recently_learned"
+            ]
+
+    # Update next review date based on performance
+    if performance_score >= 80:
+        # Good performance - review later
+        days_until_review = min(30, flashcard.review_count * 2)
+        flashcard.next_review = datetime.now(timezone.utc) + timedelta(
+            days=days_until_review
+        )
+    else:
+        # Poor performance - review soon
+        flashcard.next_review = datetime.now(timezone.utc) + timedelta(days=1)
+
+    # Store user answer history
+    if not flashcard.user_answer_history:
+        flashcard.user_answer_history = {}
+
+    flashcard.user_answer_history[str(datetime.now(timezone.utc))] = {
+        "answer": user_answer,
+        "score": performance_score,
+        "mastery": flashcard.mastery_level,
+    }
+
+    # Keep only last 10 answers
+    if len(flashcard.user_answer_history) > 10:
+        # Remove oldest entries
+        sorted_keys = sorted(flashcard.user_answer_history.keys())
+        for key in sorted_keys[:-10]:
+            del flashcard.user_answer_history[key]
+
+    db.commit()
+    db.refresh(flashcard)
+    return flashcard
+
+
+def add_flashcard_tag(db: Session, flashcard_id: uuid.UUID, tag: str) -> Flashcard:
+    """Add a tag to a flashcard"""
+    flashcard = db.query(Flashcard).filter(Flashcard.id == flashcard_id).first()
+    if not flashcard:
+        raise ValueError("Flashcard not found")
+
+    if not flashcard.tags:
+        flashcard.tags = []
+
+    if tag not in flashcard.tags:
+        flashcard.tags.append(tag)
+        db.commit()
+        db.refresh(flashcard)
+
+    return flashcard
+
+
+def remove_flashcard_tag(db: Session, flashcard_id: uuid.UUID, tag: str) -> Flashcard:
+    """Remove a tag from a flashcard"""
+    flashcard = db.query(Flashcard).filter(Flashcard.id == flashcard_id).first()
+    if not flashcard:
+        raise ValueError("Flashcard not found")
+
+    if flashcard.tags and tag in flashcard.tags:
+        flashcard.tags.remove(tag)
+        db.commit()
+        db.refresh(flashcard)
+
+    return flashcard
+
+
+def get_due_flashcards(
+    db: Session, user_id: uuid.UUID, limit: int = 20
+) -> List[Flashcard]:
+    """Get flashcards that are due for review"""
+    now = datetime.now(timezone.utc)
+    return (
+        db.query(Flashcard)
+        .filter(
+            Flashcard.user_id == user_id,
+            (Flashcard.next_review.is_(None) | (Flashcard.next_review <= now)),
+        )
+        .order_by(Flashcard.next_review.asc().nullslast())
+        .limit(limit)
+        .all()
+    )
+
+
+def create_contextual_flashcard(
+    db: Session,
+    question: str,
+    answer: str,
+    note_id: uuid.UUID,
+    user_id: uuid.UUID,
+    context_notes: List[uuid.UUID],
+) -> Flashcard:
+    """Create a contextual flashcard with multiple note context"""
+    flashcard = Flashcard(
+        question=question,
+        answer=answer,
+        note_id=note_id,
+        user_id=user_id,
+        flashcard_type="contextual",
+        context_notes=context_notes,
+        tags=["contextual"],
+    )
+    db.add(flashcard)
+    db.commit()
+    db.refresh(flashcard)
+    return flashcard
+
+
+# SRS Engine Functions (SM-2-lite algorithm)
+def get_or_create_srs_entry(
+    db: Session, flashcard_id: uuid.UUID, user_id: uuid.UUID
+) -> FlashcardSRS:
+    """Get or create SRS entry for a flashcard"""
+    srs_entry = (
+        db.query(FlashcardSRS).filter(FlashcardSRS.flashcard_id == flashcard_id).first()
+    )
+
+    if not srs_entry:
+        # Create new SRS entry with defaults
+        srs_entry = FlashcardSRS(
+            flashcard_id=flashcard_id,
+            user_id=user_id,
+            efactor=250,  # 2.5 * 100
+            interval_days=1,
+            due_date=datetime.now(timezone.utc).date(),
+            repetitions=0,
+        )
+        db.add(srs_entry)
+        db.commit()
+        db.refresh(srs_entry)
+
+    return srs_entry
+
+
+def update_srs_after_review(
+    db: Session,
+    flashcard_id: uuid.UUID,
+    user_id: uuid.UUID,
+    quality: int,  # 0-5 quality rating
+) -> FlashcardSRS:
+    """Update SRS data after a review using SM-2-lite algorithm"""
+    srs_entry = get_or_create_srs_entry(db, flashcard_id, user_id)
+
+    # SM-2-lite algorithm
+    if quality < 3:
+        # Failed - reset to beginning
+        srs_entry.repetitions = 0
+        srs_entry.interval_days = 1
+    else:
+        # Passed - increase interval
+        srs_entry.repetitions += 1
+
+        if srs_entry.repetitions == 1:
+            srs_entry.interval_days = 1
+        elif srs_entry.repetitions == 2:
+            srs_entry.interval_days = 6
+        else:
+            # Calculate new interval using E-Factor
+            ef = srs_entry.efactor / 100.0  # Convert back to float
+            new_interval = round(srs_entry.interval_days * ef)
+            srs_entry.interval_days = max(1, new_interval)
+
+        # Update E-Factor based on quality
+        ef = srs_entry.efactor / 100.0
+        ef_change = 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)
+        new_ef = max(1.3, ef + ef_change)
+        srs_entry.efactor = round(new_ef * 100)  # Store as integer
+
+    # Calculate next due date
+    next_due = datetime.now(timezone.utc).date() + timedelta(
+        days=srs_entry.interval_days
+    )
+    srs_entry.due_date = next_due
+    srs_entry.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(srs_entry)
+    return srs_entry
+
+
+def get_due_flashcards_srs(
+    db: Session, user_id: uuid.UUID, limit: int = 20
+) -> List[Flashcard]:
+    """Get flashcards that are due for review using SRS data"""
+    today = datetime.now(timezone.utc).date()
+
+    # Get flashcards due today or overdue
+    due_srs = (
+        db.query(FlashcardSRS)
+        .filter(FlashcardSRS.user_id == user_id, FlashcardSRS.due_date <= today)
+        .order_by(FlashcardSRS.due_date.asc())
+        .limit(limit)
+        .all()
+    )
+
+    # Get flashcard IDs
+    flashcard_ids = [srs.flashcard_id for srs in due_srs]
+
+    if not flashcard_ids:
+        return []
+
+    # Get actual flashcard objects
+    flashcards = db.query(Flashcard).filter(Flashcard.id.in_(flashcard_ids)).all()
+
+    # Sort by due date (overdue first)
+    flashcards.sort(
+        key=lambda f: next(srs.due_date for srs in due_srs if srs.flashcard_id == f.id)
+    )
+
+    return flashcards
+
+
+def create_flashcard_set(
+    db: Session,
+    user_id: uuid.UUID,
+    mode: str,
+    seed_note_id: uuid.UUID,
+    neighbor_note_ids: Optional[List[uuid.UUID]] = None,
+) -> FlashcardSet:
+    """Create a flashcard set to track context bundles"""
+    flashcard_set = FlashcardSet(
+        user_id=user_id,
+        mode=mode,
+        seed_note_id=seed_note_id,
+        neighbor_note_ids=neighbor_note_ids or [],
+    )
+    db.add(flashcard_set)
+    db.commit()
+    db.refresh(flashcard_set)
+    return flashcard_set
+
+
+def get_flashcard_sets_by_user(db: Session, user_id: uuid.UUID) -> List[FlashcardSet]:
+    """Get all flashcard sets for a user"""
+    return (
+        db.query(FlashcardSet)
+        .filter(FlashcardSet.user_id == user_id)
+        .order_by(FlashcardSet.created_at.desc())
+        .all()
+    )
+
+
+def archive_mastered_flashcards(
+    db: Session, user_id: uuid.UUID, min_repetitions: int = 3
+) -> List[Flashcard]:
+    """Find flashcards that have been mastered and suggest archiving"""
+    mastered_srs = (
+        db.query(FlashcardSRS)
+        .filter(
+            FlashcardSRS.user_id == user_id,
+            FlashcardSRS.repetitions >= min_repetitions,
+            FlashcardSRS.efactor >= 300,  # E-Factor >= 3.0 indicates mastery
+        )
+        .all()
+    )
+
+    if not mastered_srs:
+        return []
+
+    flashcard_ids = [srs.flashcard_id for srs in mastered_srs]
+    flashcards = db.query(Flashcard).filter(Flashcard.id.in_(flashcard_ids)).all()
+
+    # Add recently_learned tag to mastered flashcards
+    for flashcard in flashcards:
+        if not flashcard.tags:
+            flashcard.tags = []
+        if "recently_learned" not in flashcard.tags:
+            flashcard.tags.append("recently_learned")
+
+    db.commit()
+    return flashcards

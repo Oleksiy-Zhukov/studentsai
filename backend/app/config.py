@@ -1,6 +1,7 @@
 """
 Configuration management for StudentsAI MVP
 """
+
 import os
 from typing import List
 from pydantic_settings import BaseSettings
@@ -9,60 +10,55 @@ from pydantic import validator
 
 class Settings(BaseSettings):
     """Application settings with environment variable support"""
-    
+
     # Database
-    database_url: str = "postgresql://localhost:5432/studentsai_mvp"
-    
-    # OpenAI
-    openai_api_key: str
-    
-    # Security
-    secret_key: str
+    database_url: str = "postgresql://username:password@localhost:5432/studentsai_db"
+
+    # JWT
+    secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    
-    # Application
-    environment: str = "development"
-    debug: bool = True
+    verification_token_expire_minutes: int = 60  # NEW: Email verification token expiry
+
+    # Email Configuration (NEW)
+    mail_username: str = "your-email@gmail.com"
+    mail_password: str = "your-app-password"
+    mail_from: str = "your-email@gmail.com"
+    mail_port: int = 587
+    mail_tls: bool = True
+    mail_ssl: bool = False
+    mail_from_name: str = "StudentsAI"
+
+    # Google OAuth Configuration (NEW)
+    google_client_id: str = "your-google-client-id"
+    google_client_secret: str = "your-google-client-secret"
+    google_redirect_uri: str = "http://localhost:3000/auth/google/callback"
+
+    # App
+    app_name: str = "StudentsAI"
     host: str = "0.0.0.0"
     port: int = 8000
-    
+    frontend_url: str = "http://localhost:3000"  # NEW: Frontend URL for email links
+    backend_cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    allowed_origins: str = (
+        "http://localhost:3000,http://localhost:8000"  # For backward compatibility
+    )
+
+    # AI Configuration
+    openai_api_key: str = "your-openai-api-key"
+    daily_ai_request_limit: int = 100
+
     # Rate Limiting
     rate_limit_requests: int = 100
     rate_limit_window: int = 3600  # seconds
-    
+
     # Redis (optional)
     redis_url: str = "redis://localhost:6379/0"
-    
-    # CORS
-    allowed_origins: str = "http://localhost:3000,http://localhost:3001"
-    
-    @validator('allowed_origins', pre=True)
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            return v
-        return v
-    
-    @validator('database_url', pre=True)
-    def validate_database_url(cls, v):
-        if not v:
-            raise ValueError("DATABASE_URL is required")
-        return v
-    
-    @validator('openai_api_key', pre=True)
-    def validate_openai_key(cls, v):
-        if not v:
-            raise ValueError("OPENAI_API_KEY is required")
-        return v
-    
-    @validator('secret_key', pre=True)
-    def validate_secret_key(cls, v):
-        if not v:
-            raise ValueError("SECRET_KEY is required")
-        if len(v) < 32:
-            raise ValueError("SECRET_KEY must be at least 32 characters long")
-        return v
-    
+
+    # Environment
+    environment: str = "development"
+    debug: bool = True
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -82,6 +78,11 @@ SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
+# Google OAuth configuration (NEW)
+GOOGLE_CLIENT_ID = settings.google_client_id
+GOOGLE_CLIENT_SECRET = settings.google_client_secret
+GOOGLE_REDIRECT_URI = settings.google_redirect_uri
+
 # Application configuration
 ENVIRONMENT = settings.environment
 DEBUG = settings.debug
@@ -96,5 +97,4 @@ RATE_LIMIT_WINDOW = settings.rate_limit_window
 REDIS_URL = settings.redis_url
 
 # CORS configuration
-ALLOWED_ORIGINS = [origin.strip() for origin in settings.allowed_origins.split(',')]
-
+ALLOWED_ORIGINS = settings.backend_cors_origins

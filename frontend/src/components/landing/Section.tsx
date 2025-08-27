@@ -12,31 +12,41 @@ interface SectionProps {
 	title?: string
 	body?: string
 	children?: ReactNode
-	variant?: 'default' | 'alt'
+	variant?: 'default' | 'alt' | 'fullWidth'
 	className?: string
   id?: string
   mirrored?: boolean
 }
 
 export function Section({ label, title, body, children, variant = 'default', className = '', id, mirrored = false }: SectionProps) {
+	const hasHeading = Boolean(label || title || body)
+	const isFullWidth = variant === 'fullWidth'
+
 	return (
-		<section id={id} className={`mx-auto max-w-7xl px-6 py-16 ${className}`} data-reveal>
-			<div className={`${variant === 'alt' ? 'grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start' : 'grid gap-10 md:grid-cols-2 items-start'} ${mirrored ? 'md:[&>*:first-child]:order-2 md:[&>*:last-child]:order-1' : ''}`}>
-				<div>
-					{label && (
-						<div className="text-[11px] tracking-[0.14em] uppercase text-gray-500 dark:text-gray-400 mb-3">{label}</div>
-					)}
-					{title && (
-						<h2 className={`font-semibold text-gray-900 dark:text-gray-100 ${variant === 'alt' ? 'text-2xl leading-tight' : 'text-3xl'}`}>{title}</h2>
-					)}
-					{body && (
-						<p className={`mt-3 text-gray-600 dark:text-gray-300 ${variant === 'alt' ? 'text-[15px] leading-snug' : 'text-lg'}`}>{body}</p>
-					)}
+		<section id={id} className={`mx-auto ${isFullWidth ? 'w-full' : 'max-w-7xl'} px-6 py-16 ${className}`}>
+			{hasHeading ? (
+				<div className={`${variant === 'alt' ? 'grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start' : 'grid gap-10 md:grid-cols-2 items-start'} ${mirrored ? 'md:[&>*:first-child]:order-2 md:[&>*:last-child]:order-1' : ''}`}>
+					<div>
+						{label && (
+							<div className="text-[11px] tracking-[0.14em] uppercase text-gray-500 dark:text-gray-400 mb-3">{label}</div>
+						)}
+						{title && (
+							<h2 className={`font-semibold text-gray-900 dark:text-gray-100 ${variant === 'alt' ? 'text-2xl leading-tight' : 'text-3xl'}`}>{title}</h2>
+						)}
+						{body && (
+							<p className={`mt-3 text-gray-600 dark:text-gray-300 ${variant === 'alt' ? 'text-[15px] leading-snug' : 'text-lg'}`}>{body}</p>
+						)}
+					</div>
+					<div className={variant === 'alt' ? 'md:border-l md:pl-8 md:border-gray-200 md:dark:border-[#232a36]' : ''}>
+						{children}
+					</div>
 				</div>
-				<div className={variant === 'alt' ? 'md:border-l md:pl-8 md:border-gray-200 md:dark:border-[#232a36]' : ''}>
+			) : (
+				// No heading provided → render children full-width
+				<div>
 					{children}
 				</div>
-			</div>
+			)}
 		</section>
 	)
 }

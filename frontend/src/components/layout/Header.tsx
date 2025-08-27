@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { type User } from '@/lib/api'
-import { LogOut, User, Settings } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle'
 interface HeaderProps {
   user: User
   onLogout: () => void
-  context?: 'notes' | 'profile' | 'settings'
+  context?: 'notes' | 'profile' | 'settings' | 'flashcards'
 }
 
 export function Header({ user, onLogout, context = 'notes' }: HeaderProps) {
@@ -41,6 +41,11 @@ export function Header({ user, onLogout, context = 'notes' }: HeaderProps) {
                 Notes
               </Link>
             )}
+            {context !== 'flashcards' && (
+              <Link href="/flashcards" className="hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-1">
+                Flashcards
+              </Link>
+            )}
             {context !== 'profile' && (
               <Link href="/profile" className="hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-1">
                 Profile
@@ -56,29 +61,10 @@ export function Header({ user, onLogout, context = 'notes' }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
-                <User className="h-4 w-4" />
                 <span className="hidden sm:inline text-gray-700 dark:text-gray-300">{user.email}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href="/" className="flex items-center">
-                  <User className="h-4 w-4 mr-2" />
-                  Notes
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center">
-                  <User className="h-4 w-4 mr-2" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className="flex items-center">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={onLogout} className="text-red-600">
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
