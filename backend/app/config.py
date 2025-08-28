@@ -38,11 +38,15 @@ class Settings(BaseSettings):
     app_name: str = "StudentsAI"
     host: str = "0.0.0.0"
     port: int = 8000
-    frontend_url: str = "http://localhost:3000"  # NEW: Frontend URL for email links
-    backend_cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
-    allowed_origins: str = (
-        "http://localhost:3000,http://localhost:8000"  # For backward compatibility
-    )
+    frontend_url: str = "http://localhost:3000"  # NEW: Frontend URL for email links (use https://www.studentsai.org for production)
+    backend_cors_origins: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://www.studentsai.org",
+        "https://studentsai.org",
+        "https://api.studentsai.org",
+    ]
+    allowed_origins: str = "http://localhost:3000,http://localhost:8000,https://www.studentsai.org,https://studentsai.org,https://api.studentsai.org"  # For backward compatibility
 
     # AI Configuration
     openai_api_key: str = "your-openai-api-key"
@@ -57,7 +61,7 @@ class Settings(BaseSettings):
 
     # Environment
     environment: str = "development"
-    debug: bool = True
+    debug: bool = True  # Set to False in production via environment variable
 
     class Config:
         env_file = ".env"

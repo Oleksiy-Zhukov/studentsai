@@ -231,6 +231,7 @@ app.add_middleware(
 # Extra safety: ensure CORS headers are present on all responses when Origin matches
 _cors_regex = re.compile(r"https://([a-zA-Z0-9-]+\.)?(studentsai\.org|vercel\.app)$")
 
+
 @app.middleware("http")
 async def ensure_cors_headers(request: Request, call_next):
     response = await call_next(request)
@@ -793,27 +794,34 @@ async def get_notes(
     db: Session = Depends(get_db),
 ):
     """Get user's notes"""
-    await check_rate_limit(request, str(user_id))
+    try:
+        await check_rate_limit(request, str(user_id))
 
-    notes = get_notes_by_user(db, user_id, skip, limit)
+        notes = get_notes_by_user(db, user_id, skip, limit)
 
-    return NoteListResponse(
-        notes=[
-            NoteResponse(
-                id=note.id,
-                title=note.title,
-                content=note.content,
-                summary=note.summary,
-                created_at=note.created_at,
-                updated_at=note.updated_at,
-                tags=note.tags or [],
-            )
-            for note in notes
-        ],
-        total=len(notes),
-        page=skip // limit + 1,
-        per_page=limit,
-    )
+        return NoteListResponse(
+            notes=[
+                NoteResponse(
+                    id=note.id,
+                    title=note.title,
+                    content=note.content,
+                    summary=note.summary,
+                    created_at=note.created_at,
+                    updated_at=note.updated_at,
+                    tags=note.tags or [],
+                )
+                for note in notes
+            ],
+            total=len(notes),
+            page=skip // limit + 1,
+            per_page=limit,
+        )
+    except Exception as e:
+        print(f"Error in get_notes endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}",
+        )
 
 
 @app.post("/notes", response_model=NoteResponse)
