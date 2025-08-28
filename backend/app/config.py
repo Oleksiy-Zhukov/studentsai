@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    verification_token_expire_minutes: int = 60  # NEW: Email verification token expiry
+    verification_token_expire_minutes: int = 1440  # 24 hours for email verification token expiry
 
     # Email Configuration (NEW)
     mail_username: str = "your-email@gmail.com"
@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     mail_tls: bool = True
     mail_ssl: bool = False
     mail_from_name: str = "StudentsAI"
+    mail_timeout: int = 30  # Email sending timeout in seconds
 
     # Google OAuth Configuration (NEW)
     google_client_id: str = "your-google-client-id"

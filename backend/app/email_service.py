@@ -87,6 +87,7 @@ def verify_verification_token(token: str) -> Optional[str]:
 
 async def send_verification_email(email: str, username: str, verification_url: str):
     """Send verification email to user"""
+    import asyncio
 
     html_content = f"""
     <!DOCTYPE html>
@@ -203,7 +204,15 @@ async def send_verification_email(email: str, username: str, verification_url: s
         subtype="html",
     )
 
-    await fastmail.send_message(message)
+    try:
+        # Add timeout to prevent hanging email sends
+        await asyncio.wait_for(fastmail.send_message(message), timeout=settings.mail_timeout)
+    except asyncio.TimeoutError:
+        print(f"Email send timeout for {email}")
+        raise Exception("Email sending timed out")
+    except Exception as e:
+        print(f"Email send failed for {email}: {str(e)}")
+        raise
 
 
 async def send_password_change_notification(email: str, username: str):

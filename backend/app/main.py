@@ -296,15 +296,20 @@ async def register(
     try:
         user = register_user(db, user_data)
 
-        # Send verification email
-        try:
-            verification_token = create_verification_token(user.email)
-            verification_url = f"{settings.frontend_url}/verify/{verification_token}"
-            await send_verification_email(user.email, user.username, verification_url)
-        except Exception as e:
-            # Log the error but don't fail registration
-            if DEBUG:
-                print(f"Failed to send verification email: {e}")
+        # Send verification email asynchronously (don't block registration)
+        import asyncio
+        async def send_email_background():
+            try:
+                verification_token = create_verification_token(user.email)
+                verification_url = f"{settings.frontend_url}/verify/{verification_token}"
+                await send_verification_email(user.email, user.username, verification_url)
+            except Exception as e:
+                # Log the error but don't fail registration
+                if DEBUG:
+                    print(f"Failed to send verification email: {e}")
+        
+        # Start email sending as background task
+        asyncio.create_task(send_email_background())
 
         access_token = create_access_token(data={"sub": user.email})
 
