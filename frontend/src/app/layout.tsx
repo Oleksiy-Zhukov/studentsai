@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "StudentsAI - Your Intelligent Study Companion",
   description: "AI-powered study assistant for students. Create notes, generate summaries, flashcards, and visualize knowledge connections.",
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/studentsai-icon.png',
+  },
 };
 
 export default function RootLayout({
