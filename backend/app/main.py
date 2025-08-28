@@ -145,6 +145,7 @@ from .auth import (
 from .rate_limiter import check_rate_limit, check_ai_rate_limit, check_auth_rate_limit
 from .rate_limiter_enhanced import enhanced_rate_limiter, UserTier
 from urllib.parse import urlparse
+import re
 from .ai_service import (
     summarize_content,
     generate_flashcards_from_content,
@@ -226,6 +227,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Extra safety: ensure CORS headers are present on all responses when Origin matches
+_cors_regex = re.compile(r"https://([a-zA-Z0-9-]+\.)?(studentsai\.org|vercel\.app)$")
+
+@app.middleware("http")
+async def ensure_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    origin = request.headers.get("origin")
+    if origin:
+        if origin in allowed_origins or _cors_regex.match(origin):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Vary"] = "Origin"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 
 # Serve uploaded files (development convenience)
