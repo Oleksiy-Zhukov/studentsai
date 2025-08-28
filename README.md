@@ -1,307 +1,144 @@
-# StudentsAI MVP
+# StudentsAI
 
-A clean, production-ready MVP of StudentsAI - an intelligent study companion that helps students learn faster and better using AI.
+[studentsai.org](studentsai.org)
 
-## 🚀 Features
+<img width="2543" height="1327" alt="image" src="https://github.com/user-attachments/assets/893520fc-b7d2-4070-ae97-284948e2c502" />
 
-### Core MVP Features
-- **Note Management**: Create, edit, and delete notes with a clean markdown-style interface
-- **AI-Powered Summarization**: Generate intelligent summaries of notes using OpenAI
-- **Flashcard Generation**: Automatically create Q&A flashcards from note content
-- **Interactive Note Graph**: Visualize connections between notes using D3.js
-- **User Authentication**: Secure registration and login system
-- **Rate Limiting**: Built-in API rate limiting to prevent abuse
-- **Responsive Design**: Clean, modern UI that works on desktop and mobile
 
-### Technical Features
-- **FastAPI Backend**: High-performance Python backend with automatic API documentation
-- **PostgreSQL Database**: Robust relational database with proper migrations
-- **Next.js Frontend**: Modern React frontend with TypeScript and Tailwind CSS
-- **Real-time Updates**: Live updates across the application
-- **Security**: JWT authentication, input validation, and CORS protection
+An AI-powered study assistant that helps students organize knowledge, create study materials, and visualize connections between concepts.
 
-## 🏗️ Architecture
+## Tech Stack
 
-### Backend (FastAPI)
-```
-backend/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection and models
-│   ├── schemas.py           # Pydantic models for API validation
-│   ├── auth.py              # Authentication and JWT handling
-│   ├── rate_limiter.py      # Rate limiting implementation
-│   └── ai_service.py        # OpenAI integration
-├── alembic/                 # Database migrations
-├── requirements.txt         # Python dependencies
-└── .env                     # Environment variables
-```
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-FCA121?style=for-the-badge&logo=python&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/uvicorn-F69220?style=for-the-badge&logo=uvicorn&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![Railway](https://img.shields.io/badge/Railway-111113?style=for-the-badge&logo=railway&logoColor=white)
 
-### Frontend (Next.js)
-```
-frontend/
-├── src/
-│   ├── app/                 # Next.js app router
-│   ├── components/          # React components
-│   │   ├── auth/           # Authentication components
-│   │   ├── notes/          # Note management components
-│   │   ├── flashcards/     # Flashcard viewer
-│   │   ├── graph/          # D3.js graph visualization
-│   │   └── ui/             # Reusable UI components
-│   ├── lib/                # Utilities and API client
-│   └── styles/             # Global styles
-├── package.json            # Node.js dependencies
-└── tailwind.config.ts      # Tailwind CSS configuration
-```
+## About
 
-## 🛠️ Setup Instructions
+StudentsAI transforms the way students learn by combining note-taking, AI-powered content generation, and knowledge visualization in one seamless platform. Whether you're organizing lecture notes, generating study materials, or exploring connections between concepts, StudentsAI adapts to your learning style and helps you study more effectively.
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 14+
-- OpenAI API key (optional for AI features)
+The platform leverages OpenAI's GPT models to automatically summarize content, generate flashcards, and extract key concepts from your notes. An interactive graph visualization helps you see how different topics connect, while a spaced repetition system ensures optimal retention of learned material.
 
-### Backend Setup
+## Features
 
-1. **Clone and navigate to backend**
-   ```bash
-   cd studentsai-mvp/backend
-   ```
+### Note Management
+- **Rich Text Editor**: Create and edit notes with a clean, intuitive interface
+- **Auto-Save**: Notes are automatically saved as you type
+- **Tagging System**: Organize notes with custom tags for easy categorization
+- **Search and Filter**: Quickly find notes by title, content, or tags
 
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### AI-Powered Study Tools
+- **AI Summarization**: Generate concise summaries of your notes using GPT-3.5
+- **Flashcard Generation**: Automatically create study flashcards from note content
+- **Contextual Flashcards**: Generate flashcards using related notes for broader context
+- **Keyword Extraction**: AI identifies key concepts and terms from your notes
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Knowledge Visualization
+- **Interactive Graph**: Visualize connections between your notes in an interactive network
+- **Note Linking**: Create manual and automatic links between related concepts
+- **Similarity Detection**: AI identifies and suggests connections between similar notes
+- **Backlink System**: See which notes reference each other
 
-4. **Set up PostgreSQL**
-   ```bash
-   # Create database and user
-   sudo -u postgres psql -c "CREATE DATABASE studentsai_mvp;"
-   sudo -u postgres psql -c "CREATE USER studentsai WITH PASSWORD 'password';"
-   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE studentsai_mvp TO studentsai;"
-   ```
+### Study Progress Tracking
+- **Activity Dashboard**: Track your study activity with detailed statistics
+- **Heatmap Visualization**: See your study patterns over time
+- **Progress Metrics**: Monitor notes created, flashcards generated, and AI usage
+- **Study Streaks**: Track consecutive days of study activity
 
-5. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database URL and OpenAI API key
-   ```
+### Spaced Repetition System (SRS)
+- **Smart Scheduling**: Optimized review intervals based on performance
+- **Difficulty Tracking**: Adjust review frequency based on flashcard difficulty
+- **Performance Analytics**: Track your mastery of different topics
+- **Review Sessions**: Structured study sessions with immediate feedback
 
-6. **Run database migrations**
-   ```bash
-   alembic upgrade head
-   ```
+### User Management
+- **Secure Authentication**: Email/password and Google OAuth login options
+- **Email Verification**: Secure account activation process
+- **Profile Management**: Customize your study preferences and settings
+- **Tier-Based Features**: Free and premium feature tiers
 
-7. **Start the backend server**
-   ```bash
-   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
+## Bug Report or Feature Request
 
-### Frontend Setup
+Found a bug or have an idea for a new feature? We'd love to hear from you!
 
-1. **Navigate to frontend**
-   ```bash
-   cd studentsai-mvp/frontend
-   ```
+### Reporting Bugs
+1. Check if the issue already exists in [Issues](https://github.com/Oleksiy-Zhukov/studentsai/issues)
+2. If not, create a new issue with:
+   - Clear description of the problem
+   - Steps to reproduce the bug
+   - Expected vs actual behavior
+   - Screenshots if applicable
+   - Browser/device information
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+### Requesting Features
+1. Search existing [Issues](https://github.com/Oleksiy-Zhukov/studentsai/issues) to avoid duplicates
+2. Create a new issue with:
+   - Clear feature description
+   - Use case and benefits
+   - Any implementation ideas you might have
 
-3. **Configure environment**
-   ```bash
-   cp .env.local.example .env.local
-   # Edit .env.local with your backend URL
-   ```
+## Contributing
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+We welcome contributions from the community! Here's how you can help:
 
-### Access the Application
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-
-## 🔧 Configuration
-
-### Environment Variables
-
-#### Backend (.env)
-```env
-DATABASE_URL=postgresql://studentsai:password@localhost:5432/studentsai_mvp
-OPENAI_API_KEY=your-openai-api-key-here
-SECRET_KEY=your-secret-key-for-jwt
-DEBUG=true
-```
-
-#### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-## 📚 API Documentation
-
-The backend provides automatic API documentation via FastAPI:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Key Endpoints
-
-#### Authentication
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-- `GET /auth/me` - Get current user
-
-#### Notes
-- `GET /notes` - List user notes
-- `POST /notes` - Create new note
-- `GET /notes/{id}` - Get specific note
-- `PUT /notes/{id}` - Update note
-- `DELETE /notes/{id}` - Delete note
-
-#### AI Features
-- `POST /notes/{id}/summary` - Generate AI summary
-- `POST /notes/{id}/flashcards` - Generate flashcards
-- `GET /notes/graph` - Get notes graph data
-
-## 🎨 Design System
-
-The frontend follows the StudentsAI design system with:
-
-- **Colors**: Orange (#f97316) primary, Purple (#8b5cf6) secondary
-- **Typography**: Inter font family for clean readability
-- **Components**: Consistent button, input, and card designs
-- **Layout**: Responsive grid system with mobile-first approach
-
-## 🔒 Security Features
-
-- **JWT Authentication**: Secure token-based authentication
-- **Password Hashing**: Bcrypt for secure password storage
-- **Input Validation**: Pydantic schemas for API validation
-- **Rate Limiting**: Per-user and per-IP rate limiting
-- **CORS Protection**: Configurable cross-origin request handling
-- **SQL Injection Prevention**: SQLAlchemy ORM with parameterized queries
-
-## 🚀 Deployment
-
-### Production Deployment
-
-1. **Backend Deployment**
-   - Use a production WSGI server like Gunicorn
-   - Set up PostgreSQL database
-   - Configure environment variables
-   - Set up reverse proxy (Nginx)
-
-2. **Frontend Deployment**
-   - Build the production bundle: `npm run build`
-   - Deploy to Vercel, Netlify, or similar platform
-   - Configure environment variables
-
-### Docker Deployment (Optional)
-
-Create `docker-compose.yml` for easy deployment:
-
-```yaml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:14
-    environment:
-      POSTGRES_DB: studentsai_mvp
-      POSTGRES_USER: studentsai
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: postgresql://studentsai:password@postgres:5432/studentsai_mvp
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-
-volumes:
-  postgres_data:
-```
-
-## 🧪 Testing
-
-### Backend Testing
-```bash
-cd backend
-python -m pytest tests/
-```
-
-### Frontend Testing
-```bash
-cd frontend
-npm test
-```
-
-## 📈 Performance
-
-- **Backend**: FastAPI provides high performance with automatic async support
-- **Frontend**: Next.js optimizations including code splitting and image optimization
-- **Database**: PostgreSQL with proper indexing for fast queries
-- **Caching**: Redis can be added for session and API response caching
-
-## 🔄 Development Workflow
-
-1. **Feature Development**
-   - Create feature branch
-   - Implement backend API endpoints
-   - Add frontend components
-   - Test integration
-   - Update documentation
-
-2. **Code Quality**
-   - Use TypeScript for type safety
-   - Follow PEP 8 for Python code
-   - Use Prettier for code formatting
-   - Add unit tests for critical functions
-
-## 🤝 Contributing
-
+### Getting Started
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Make your changes following our coding standards
+4. Test your changes thoroughly
+5. Commit with clear, descriptive messages
+6. Push to your fork: `git push origin feature/your-feature-name`
+7. Submit a pull request
 
-## 📄 License
+### Development Guidelines
+- Follow TypeScript best practices for frontend code
+- Use FastAPI conventions for backend endpoints
+- Write tests for new features when possible
+- Update documentation for any API changes
+- Ensure proper error handling and logging
+- Maintain consistent code formatting
 
-This project is licensed under the MIT License.
+### Code of Conduct
+- Be respectful and inclusive
+- Provide constructive feedback
+- Help others learn and grow
+- Follow project guidelines and standards
 
-## 🆘 Support
+## Credits & Support
 
-For support and questions:
-- Check the API documentation at `/docs`
-- Review the code comments and docstrings
-- Create an issue in the repository
+### Author
+**Oleksiy Zhukov**
+- GitHub: [@Oleksiy-Zhukov](https://github.com/Oleksiy-Zhukov)
+- LinkedIn: [Connect with me](https://www.linkedin.com/in/oleksiizhukov/)
+- Email: [zhukov.oleksiy@gmail.com](mailto:zhukov.oleksiy@gmail.com)
+
+### Support
+If you find StudentsAI helpful, consider:
+- Starring the repository
+- Sharing it with fellow students
+- Contributing to the codebase
+- Reporting bugs and suggesting improvements
+
+For technical support or questions:
+- Open an issue on GitHub
+- Check the documentation
+- Contact me directly via email
+
+### Acknowledgments
+- OpenAI for providing the GPT API
+- The FastAPI and Next.js communities
+- Railway and Vercel for hosting platforms
+- All beta testers and contributors
 
 ---
 
-**Built with ❤️ for students who want to learn smarter, not harder.**
+Built with passion for education and powered by AI to help students learn more effectively.
