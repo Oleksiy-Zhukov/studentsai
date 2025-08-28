@@ -71,16 +71,18 @@ class AIService:
             Create {count} educational flashcards from the following content.
             Each flashcard should have a clear question and a concise answer.
             Focus on key concepts, definitions, and important facts.
-            Format your response as a JSON array with objects containing "question" and "answer" fields.
+            
+            IMPORTANT: You must respond with ONLY a valid JSON array. No other text or explanation.
             
             Content:
             {content}
             
-            Generate exactly {count} flashcards in this JSON format:
+            Response format (JSON array only):
             [
                 {{"question": "What is...", "answer": "..."}},
                 {{"question": "How does...", "answer": "..."}},
-                ...
+                {{"question": "Define...", "answer": "..."}},
+                {{"question": "Explain...", "answer": "..."}}
             ]
             """
 
@@ -90,7 +92,7 @@ class AIService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an educational assistant that creates high-quality study flashcards. Always respond with valid JSON.",
+                        "content": "You are an educational assistant that creates high-quality study flashcards. You MUST respond with ONLY a valid JSON array containing question-answer pairs. No explanations, no markdown, no other text - just pure JSON.",
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -99,6 +101,15 @@ class AIService:
             )
 
             response_text = response.choices[0].message.content.strip()
+
+            # Clean up the response - remove markdown code blocks if present
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            if response_text.startswith("```"):
+                response_text = response_text[3:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
 
             # Parse JSON response
             import json
@@ -138,7 +149,9 @@ class AIService:
                     return self._parse_flashcards_fallback(response_text, count)
 
                 return normalized[:count]
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error in generate_flashcards: {str(e)}")
+                logger.error(f"Raw response: {response_text}")
                 # Fallback: extract Q&A pairs manually
                 return self._parse_flashcards_fallback(response_text, count)
 
@@ -176,14 +189,41 @@ class AIService:
                 GeneratedFlashcard(question=current_question, answer=current_answer)
             )
 
-        # If still no flashcards, create simple ones
+        # If still no flashcards, try to extract any Q&A patterns from the text
         if not flashcards:
-            flashcards = [
-                GeneratedFlashcard(
-                    question="What are the main points of this content?",
-                    answer="Please review the original content for key concepts.",
-                )
+            # Look for numbered questions or bullet points
+            import re
+
+            # Try to find question patterns
+            question_patterns = [
+                r"(\d+\.\s*.*?\?)",  # Numbered questions
+                r"(Q\d*\.?\s*.*?\?)",  # Q1. questions
+                r"(\*\s*.*?\?)",  # Bullet point questions
+                r"(-\s*.*?\?)",  # Dash questions
             ]
+
+            potential_questions = []
+            for pattern in question_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+                potential_questions.extend(matches)
+
+            # If we found some questions, use them
+            if potential_questions:
+                for i, q in enumerate(potential_questions[:count]):
+                    flashcards.append(
+                        GeneratedFlashcard(
+                            question=q.strip(),
+                            answer="Please refer to the content for the answer.",
+                        )
+                    )
+            else:
+                # Last resort: create one generic card
+                flashcards = [
+                    GeneratedFlashcard(
+                        question="What are the key concepts covered in this content?",
+                        answer="Review the content to identify the main ideas and important details.",
+                    )
+                ]
 
         return flashcards[:count]
 
