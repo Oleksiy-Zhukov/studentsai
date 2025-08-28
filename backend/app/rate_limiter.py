@@ -8,7 +8,7 @@ from collections import defaultdict, deque
 from fastapi import HTTPException, Request, status
 from functools import wraps
 
-from .config import RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW, DEBUG
+from .config import RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW, DEBUG, settings
 
 
 class InMemoryRateLimiter:
@@ -130,7 +130,7 @@ def rate_limit(limit: int = RATE_LIMIT_REQUESTS, window: int = RATE_LIMIT_WINDOW
 
 
 # Specific rate limits for different endpoints
-AI_RATE_LIMIT = 10  # AI operations per hour
+AI_RATE_LIMIT = settings.ai_requests_per_hour  # AI operations per hour (configurable)
 AI_RATE_WINDOW = 3600
 
 UPLOAD_RATE_LIMIT = 20  # File uploads per hour

@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     # AI Configuration
     openai_api_key: str = "your-openai-api-key"
     daily_ai_request_limit: int = 100
+    ai_requests_per_hour: int = 100  # Hourly AI request limit
 
     # Rate Limiting
     rate_limit_requests: int = 100
