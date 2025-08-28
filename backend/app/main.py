@@ -178,6 +178,7 @@ app = FastAPI(
     redoc_url="/redoc" if DEBUG else None,
 )
 
+
 # Add CORS middleware
 # Build robust CORS origins from env (supports both list and comma-separated string,
 # and automatically includes www/non-www variants of FRONTEND_URL)
@@ -196,6 +197,7 @@ def _origin_variants(url: str) -> list[str]:
         return list(hosts)
     except Exception:
         return []
+
 
 origins_set = set()
 
@@ -219,6 +221,7 @@ allowed_origins = list(origins_set)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://([a-zA-Z0-9-]+\.)?(studentsai\.org|vercel\.app)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
