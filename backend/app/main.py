@@ -144,6 +144,7 @@ from .auth import (
 )
 from .rate_limiter import check_rate_limit, check_ai_rate_limit, check_auth_rate_limit
 from .rate_limiter_enhanced import enhanced_rate_limiter, UserTier
+from urllib.parse import urlparse
 from .ai_service import (
     summarize_content,
     generate_flashcards_from_content,
@@ -178,7 +179,43 @@ app = FastAPI(
 )
 
 # Add CORS middleware
-allowed_origins = list(set(ALLOWED_ORIGINS + [settings.frontend_url]))
+# Build robust CORS origins from env (supports both list and comma-separated string,
+# and automatically includes www/non-www variants of FRONTEND_URL)
+def _origin_variants(url: str) -> list[str]:
+    try:
+        p = urlparse(url)
+        if not p.scheme or not p.netloc:
+            return []
+        base = f"{p.scheme}://{p.netloc}"
+        hosts = {base}
+        host = p.netloc
+        if host.startswith("www."):
+            hosts.add(f"{p.scheme}://{host[4:]}")
+        else:
+            hosts.add(f"{p.scheme}://www.{host}")
+        return list(hosts)
+    except Exception:
+        return []
+
+origins_set = set()
+
+# From list env (BACKEND_CORS_ORIGINS)
+for o in ALLOWED_ORIGINS:
+    o = o.strip()
+    if o:
+        origins_set.add(o)
+
+# From comma-separated env (allowed_origins)
+for o in (settings.allowed_origins or "").split(","):
+    o = o.strip()
+    if o:
+        origins_set.add(o)
+
+# From FRONTEND_URL with www/non-www variants
+for v in _origin_variants(settings.frontend_url):
+    origins_set.add(v)
+
+allowed_origins = list(origins_set)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
