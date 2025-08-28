@@ -1,6 +1,6 @@
 # StudentsAI
 
-[studentsai.org](studentsai.org)
+[studentsai.org](https://www.studentsai.org/landing)
 
 <img width="2543" height="1327" alt="image" src="https://github.com/user-attachments/assets/893520fc-b7d2-4070-ae97-284948e2c502" />
 
