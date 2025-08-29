@@ -520,7 +520,7 @@ async def send_email_change_verification_step1(
             subtype="html",
         )
 
-        await fastmail.send_message(message)
+        await get_fastmail().send_message(message)
         return True
 
     except Exception as e:
@@ -569,7 +569,7 @@ async def send_email_change_verification_step2(
             subtype="html",
         )
 
-        await fastmail.send_message(message)
+        await get_fastmail().send_message(message)
         return True
 
     except Exception as e:
