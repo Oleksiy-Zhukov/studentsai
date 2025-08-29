@@ -46,6 +46,7 @@ export function ProfileSettings({ user, onUserUpdate }: ProfileSettingsProps) {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [showEmailConfirm, setShowEmailConfirm] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
   const [attemptCount, setAttemptCount] = useState(0)
   const [lastAttemptTime, setLastAttemptTime] = useState(0)
 
@@ -668,21 +669,37 @@ export function ProfileSettings({ user, onUserUpdate }: ProfileSettingsProps) {
                 </Button>
                 <Button
                   variant="destructive"
-                  disabled={deleteConfirmation !== 'DELETE'}
+                  disabled={deleteConfirmation !== 'DELETE' || isDeleting}
                   onClick={async () => {
+                    setIsDeleting(true)
                     try {
-                      await api.requestAccountDeletion()
-                      alert('Account deletion request submitted. You will receive a confirmation email.')
-                    } catch (e: any) {
-                      alert(e?.message || 'Failed to request account deletion')
-                    } finally {
+                      const response = await api.requestAccountDeletion()
+                      setMessage({ 
+                        type: 'success', 
+                        text: 'Account deletion email sent! Please check your inbox and click the confirmation link.' 
+                      })
                       setShowDeleteConfirm(false)
                       setDeleteConfirmation('')
+                    } catch (e: any) {
+                      console.error('Account deletion request failed:', e)
+                      setMessage({ 
+                        type: 'error', 
+                        text: e?.message || 'Failed to send deletion email. Please try again or contact support.' 
+                      })
+                    } finally {
+                      setIsDeleting(false)
                     }
                   }}
                   className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white border-0 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Delete Account
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Sending Email...
+                    </>
+                  ) : (
+                    'Delete Account'
+                  )}
                 </Button>
               </div>
             </div>

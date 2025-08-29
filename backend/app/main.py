@@ -257,6 +257,59 @@ async def health_check():
     return {"status": "healthy", "service": "StudentsAI MVP API"}
 
 
+@app.post("/test/email")
+async def test_email_service(
+    request: Request,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Test endpoint to verify email service is working"""
+    await check_rate_limit(request, str(user_id))
+    
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    try:
+        # Test basic email sending
+        from .email_service import fastmail, MessageSchema
+        import asyncio
+        
+        message = MessageSchema(
+            subject="Email Service Test - StudentsAI",
+            recipients=[user.email],
+            body="<h2>Email Test</h2><p>If you received this, your email service is working!</p>",
+            subtype="html",
+        )
+        
+        await asyncio.wait_for(fastmail.send_message(message), timeout=30)
+        
+        return {"status": "success", "message": f"Test email sent to {user.email}"}
+        
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": f"Email service failed: {str(e)}",
+            "details": str(type(e).__name__)
+        }
+
+
+@app.get("/test/email-config")
+async def test_email_config():
+    """Check email configuration without sending emails"""
+    return {
+        "mail_username": settings.mail_username if settings.mail_username != "your-email@gmail.com" else "NOT_SET",
+        "mail_from": settings.mail_from if settings.mail_from != "your-email@gmail.com" else "NOT_SET", 
+        "mail_port": settings.mail_port,
+        "mail_tls": settings.mail_tls,
+        "mail_ssl": settings.mail_ssl,
+        "mail_password_set": bool(settings.mail_password and settings.mail_password != "your-app-password"),
+        "mail_timeout": settings.mail_timeout,
+        "frontend_url": settings.frontend_url,
+        "verification_token_expire_minutes": settings.verification_token_expire_minutes,
+    }
+
+
 # Create database tables on startup
 @app.on_event("startup")
 async def startup_event():
@@ -2711,13 +2764,18 @@ async def request_account_deletion(
 
     try:
         await send_account_deletion_email(user.email, confirm_url)
-    except Exception:
-        # Don't leak details
-        pass
-
-    return SuccessResponse(
-        message="If your email is valid, a confirmation link was sent."
-    )
+        return SuccessResponse(
+            message="Account deletion confirmation email sent successfully."
+        )
+    except Exception as e:
+        # Log the error for debugging but don't leak details to user
+        if DEBUG:
+            print(f"Failed to send account deletion email to {user.email}: {str(e)}")
+        
+        # Still return success to prevent email enumeration, but log the issue
+        return SuccessResponse(
+            message="If your email is valid, a confirmation link was sent."
+        )
 
 
 @app.post("/auth/confirm-account-deletion", response_model=SuccessResponse)

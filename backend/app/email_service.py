@@ -205,14 +205,21 @@ async def send_verification_email(email: str, username: str, verification_url: s
     )
 
     try:
+        print(f"Attempting to send verification email to {email}")
+        print(f"Using SMTP config: {settings.mail_username} via {settings.mail_port}")
+        
         # Add timeout to prevent hanging email sends
         await asyncio.wait_for(fastmail.send_message(message), timeout=settings.mail_timeout)
+        print(f"Successfully sent verification email to {email}")
+        
     except asyncio.TimeoutError:
-        print(f"Email send timeout for {email}")
-        raise Exception("Email sending timed out")
+        error_msg = f"Email send timeout for {email} after {settings.mail_timeout} seconds"
+        print(error_msg)
+        raise Exception(error_msg)
     except Exception as e:
-        print(f"Email send failed for {email}: {str(e)}")
-        raise
+        error_msg = f"Email send failed for {email}: {str(e)} (Type: {type(e).__name__})"
+        print(error_msg)
+        raise Exception(error_msg)
 
 
 async def send_password_change_notification(email: str, username: str):
@@ -332,14 +339,94 @@ async def send_password_reset_email(email: str, reset_url: str):
 
 async def send_account_deletion_email(email: str, confirm_url: str):
     """Send account deletion confirmation email"""
+    import asyncio
+    
     html_content = f"""
+    <!DOCTYPE html>
     <html>
-      <body>
-        <h2>Confirm Account Deletion</h2>
-        <p>You requested to delete your account. This action is irreversible.</p>
-        <p>Click to confirm deletion: <a href="{confirm_url}">Confirm Delete</a></p>
-        <p>If you didn't request this, ignore this email.</p>
-      </body>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirm Account Deletion - StudentsAI</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f8f9fa;
+            }}
+            .container {{
+                background-color: white;
+                padding: 40px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 30px;
+            }}
+            .logo {{
+                font-size: 24px;
+                font-weight: bold;
+                color: #f97316;
+                margin-bottom: 10px;
+            }}
+            .delete-button {{
+                display: inline-block;
+                background-color: #dc2626;
+                color: white;
+                padding: 12px 24px;
+                text-decoration: none;
+                border-radius: 6px;
+                font-weight: 500;
+                margin: 20px 0;
+            }}
+            .warning {{
+                background-color: #fef2f2;
+                border-left: 4px solid #dc2626;
+                padding: 15px;
+                margin: 20px 0;
+                border-radius: 4px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">StudentsAI</div>
+                <h2>Confirm Account Deletion</h2>
+            </div>
+            
+            <div class="warning">
+                <strong>⚠️ Important:</strong> This action is permanent and cannot be undone.
+            </div>
+            
+            <p>You requested to delete your StudentsAI account. This will permanently remove:</p>
+            <ul>
+                <li>All your notes and study materials</li>
+                <li>Generated flashcards and summaries</li>
+                <li>Study progress and statistics</li>
+                <li>Account settings and preferences</li>
+            </ul>
+            
+            <p>If you're sure you want to proceed, click the button below:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{confirm_url}" class="delete-button">
+                    Confirm Account Deletion
+                </a>
+            </div>
+            
+            <p><strong>If you didn't request this deletion, please ignore this email.</strong> Your account will remain safe and unchanged.</p>
+            
+            <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                This link will expire in 24 hours for security purposes.
+            </p>
+        </div>
+    </body>
     </html>
     """
 
@@ -349,7 +436,16 @@ async def send_account_deletion_email(email: str, confirm_url: str):
         body=html_content,
         subtype="html",
     )
-    await fastmail.send_message(message)
+    
+    try:
+        # Add timeout to prevent hanging email sends
+        await asyncio.wait_for(fastmail.send_message(message), timeout=settings.mail_timeout)
+    except asyncio.TimeoutError:
+        print(f"Account deletion email send timeout for {email}")
+        raise Exception("Email sending timed out")
+    except Exception as e:
+        print(f"Account deletion email send failed for {email}: {str(e)}")
+        raise
 
 
 async def send_email_change_verification_step1(
