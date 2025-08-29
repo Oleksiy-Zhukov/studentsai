@@ -12,22 +12,25 @@ from .database import get_db, Session
 from .auth import get_user_by_email, get_user_by_id
 import uuid
 
-# Email configuration with Railway-optimized settings
-conf = ConnectionConfig(
-    MAIL_USERNAME=settings.mail_username,
-    MAIL_PASSWORD=settings.mail_password,
-    MAIL_FROM=settings.mail_from,
-    MAIL_PORT=587,  # Force port 587 for TLS
-    MAIL_SERVER=settings.mail_server,
-    MAIL_STARTTLS=True,  # Force STARTTLS
-    MAIL_SSL_TLS=False,  # Disable SSL, use STARTTLS instead
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
-    # Optimize for Railway/cloud hosting
-    TIMEOUT=settings.mail_timeout,  # Use configurable timeout from environment
-)
+def get_email_config():
+    """Get email configuration dynamically to ensure environment variables are loaded"""
+    return ConnectionConfig(
+        MAIL_USERNAME=settings.mail_username,
+        MAIL_PASSWORD=settings.mail_password,
+        MAIL_FROM=settings.mail_from,
+        MAIL_PORT=587,  # Force port 587 for TLS
+        MAIL_SERVER=settings.mail_server,
+        MAIL_STARTTLS=True,  # Force STARTTLS
+        MAIL_SSL_TLS=False,  # Disable SSL, use STARTTLS instead
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True,
+        # Optimize for Railway/cloud hosting
+        TIMEOUT=settings.mail_timeout,  # Use configurable timeout from environment
+    )
 
-fastmail = FastMail(conf)
+def get_fastmail():
+    """Get FastMail instance with current configuration"""
+    return FastMail(get_email_config())
 
 
 def create_verification_token(email: str) -> str:
@@ -214,7 +217,7 @@ async def send_verification_email(email: str, username: str, verification_url: s
 
         # Add timeout to prevent hanging email sends
         await asyncio.wait_for(
-            fastmail.send_message(message), timeout=settings.mail_timeout
+            get_fastmail().send_message(message), timeout=settings.mail_timeout
         )
         print(f"Successfully sent verification email to {email}")
 
@@ -325,7 +328,7 @@ async def send_password_change_notification(email: str, username: str):
         subtype="html",
     )
 
-    await fastmail.send_message(message)
+    await get_fastmail().send_message(message)
 
 
 async def send_password_reset_email(email: str, reset_url: str):
@@ -347,7 +350,7 @@ async def send_password_reset_email(email: str, reset_url: str):
         body=html_content,
         subtype="html",
     )
-    await fastmail.send_message(message)
+    await get_fastmail().send_message(message)
 
 
 async def send_account_deletion_email(email: str, confirm_url: str):

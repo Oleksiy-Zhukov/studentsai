@@ -265,32 +265,32 @@ async def test_email_service(
 ):
     """Test endpoint to verify email service is working"""
     await check_rate_limit(request, str(user_id))
-    
+
     user = get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     try:
         # Test basic email sending
         from .email_service import fastmail, MessageSchema
         import asyncio
-        
+
         message = MessageSchema(
             subject="Email Service Test - StudentsAI",
             recipients=[user.email],
             body="<h2>Email Test</h2><p>If you received this, your email service is working!</p>",
             subtype="html",
         )
-        
+
         await asyncio.wait_for(fastmail.send_message(message), timeout=30)
-        
+
         return {"status": "success", "message": f"Test email sent to {user.email}"}
-        
+
     except Exception as e:
         return {
-            "status": "error", 
+            "status": "error",
             "message": f"Email service failed: {str(e)}",
-            "details": str(type(e).__name__)
+            "details": str(type(e).__name__),
         }
 
 
@@ -298,13 +298,19 @@ async def test_email_service(
 async def test_email_config():
     """Check email configuration without sending emails"""
     return {
-        "mail_username": settings.mail_username if settings.mail_username != "your-email@gmail.com" else "NOT_SET",
-        "mail_from": settings.mail_from if settings.mail_from != "your-email@gmail.com" else "NOT_SET", 
+        "mail_username": settings.mail_username
+        if settings.mail_username != "your-email@gmail.com"
+        else "NOT_SET",
+        "mail_from": settings.mail_from
+        if settings.mail_from != "your-email@gmail.com"
+        else "NOT_SET",
         "mail_server": settings.mail_server,
         "mail_port": settings.mail_port,
         "mail_tls": settings.mail_tls,
         "mail_ssl": settings.mail_ssl,
-        "mail_password_set": bool(settings.mail_password and settings.mail_password != "your-app-password"),
+        "mail_password_set": bool(
+            settings.mail_password and settings.mail_password != "your-app-password"
+        ),
         "mail_timeout": settings.mail_timeout,
         "frontend_url": settings.frontend_url,
         "verification_token_expire_minutes": settings.verification_token_expire_minutes,
@@ -352,16 +358,21 @@ async def register(
 
         # Send verification email asynchronously (don't block registration)
         import asyncio
+
         async def send_email_background():
             try:
                 verification_token = create_verification_token(user.email)
-                verification_url = f"{settings.frontend_url}/verify/{verification_token}"
-                await send_verification_email(user.email, user.username, verification_url)
+                verification_url = (
+                    f"{settings.frontend_url}/verify/{verification_token}"
+                )
+                await send_verification_email(
+                    user.email, user.username, verification_url
+                )
             except Exception as e:
                 # Log the error but don't fail registration
                 if DEBUG:
                     print(f"Failed to send verification email: {e}")
-        
+
         # Start email sending as background task
         asyncio.create_task(send_email_background())
 
@@ -2772,7 +2783,7 @@ async def request_account_deletion(
         # Log the error for debugging but don't leak details to user
         if DEBUG:
             print(f"Failed to send account deletion email to {user.email}: {str(e)}")
-        
+
         # Still return success to prevent email enumeration, but log the issue
         return SuccessResponse(
             message="If your email is valid, a confirmation link was sent."
