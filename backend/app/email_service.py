@@ -458,7 +458,7 @@ async def send_account_deletion_email(email: str, confirm_url: str):
     try:
         # Add timeout to prevent hanging email sends
         await asyncio.wait_for(
-            fastmail.send_message(message), timeout=settings.mail_timeout
+            get_fastmail().send_message(message), timeout=settings.mail_timeout
         )
     except asyncio.TimeoutError:
         print(f"Account deletion email send timeout for {email}")
