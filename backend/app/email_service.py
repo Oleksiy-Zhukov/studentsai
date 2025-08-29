@@ -24,7 +24,7 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=True,
     VALIDATE_CERTS=True,
     # Optimize for Railway/cloud hosting
-    TIMEOUT=60,  # Increase connection timeout
+    TIMEOUT=settings.mail_timeout,  # Use configurable timeout from environment
 )
 
 fastmail = FastMail(conf)
@@ -208,7 +208,9 @@ async def send_verification_email(email: str, username: str, verification_url: s
 
     try:
         print(f"Attempting to send verification email to {email}")
-        print(f"SMTP config: {settings.mail_username}@{settings.mail_server}:{settings.mail_port} (TLS: {settings.mail_tls})")
+        print(
+            f"SMTP config: {settings.mail_username}@{settings.mail_server}:{settings.mail_port} (TLS: {settings.mail_tls})"
+        )
 
         # Add timeout to prevent hanging email sends
         await asyncio.wait_for(
@@ -223,11 +225,13 @@ async def send_verification_email(email: str, username: str, verification_url: s
     except Exception as e:
         error_msg = f"SMTP connection failed to {settings.mail_server}: {str(e)} (Type: {type(e).__name__})"
         print(error_msg)
-        
+
         # If Gmail fails, suggest alternatives
         if "gmail" in settings.mail_server.lower():
-            print("Gmail SMTP may be blocked. Consider using SendGrid, Mailgun, or AWS SES for production.")
-        
+            print(
+                "Gmail SMTP may be blocked. Consider using SendGrid, Mailgun, or AWS SES for production."
+            )
+
         raise Exception(error_msg)
 
 
