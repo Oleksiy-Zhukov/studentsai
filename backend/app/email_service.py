@@ -12,17 +12,19 @@ from .database import get_db, Session
 from .auth import get_user_by_email, get_user_by_id
 import uuid
 
-# Email configuration
+# Email configuration with Railway-optimized settings
 conf = ConnectionConfig(
     MAIL_USERNAME=settings.mail_username,
     MAIL_PASSWORD=settings.mail_password,
     MAIL_FROM=settings.mail_from,
-    MAIL_PORT=settings.mail_port,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=settings.mail_tls,
-    MAIL_SSL_TLS=settings.mail_ssl,
+    MAIL_PORT=587,  # Force port 587 for TLS
+    MAIL_SERVER=settings.mail_server,
+    MAIL_STARTTLS=True,  # Force STARTTLS
+    MAIL_SSL_TLS=False,  # Disable SSL, use STARTTLS instead
     USE_CREDENTIALS=True,
     VALIDATE_CERTS=True,
+    # Optimize for Railway/cloud hosting
+    TIMEOUT=60,  # Increase connection timeout
 )
 
 fastmail = FastMail(conf)
@@ -206,19 +208,26 @@ async def send_verification_email(email: str, username: str, verification_url: s
 
     try:
         print(f"Attempting to send verification email to {email}")
-        print(f"Using SMTP config: {settings.mail_username} via {settings.mail_port}")
-        
+        print(f"SMTP config: {settings.mail_username}@{settings.mail_server}:{settings.mail_port} (TLS: {settings.mail_tls})")
+
         # Add timeout to prevent hanging email sends
-        await asyncio.wait_for(fastmail.send_message(message), timeout=settings.mail_timeout)
+        await asyncio.wait_for(
+            fastmail.send_message(message), timeout=settings.mail_timeout
+        )
         print(f"Successfully sent verification email to {email}")
-        
+
     except asyncio.TimeoutError:
-        error_msg = f"Email send timeout for {email} after {settings.mail_timeout} seconds"
+        error_msg = f"SMTP connection timeout to {settings.mail_server}:{settings.mail_port} after {settings.mail_timeout}s"
         print(error_msg)
         raise Exception(error_msg)
     except Exception as e:
-        error_msg = f"Email send failed for {email}: {str(e)} (Type: {type(e).__name__})"
+        error_msg = f"SMTP connection failed to {settings.mail_server}: {str(e)} (Type: {type(e).__name__})"
         print(error_msg)
+        
+        # If Gmail fails, suggest alternatives
+        if "gmail" in settings.mail_server.lower():
+            print("Gmail SMTP may be blocked. Consider using SendGrid, Mailgun, or AWS SES for production.")
+        
         raise Exception(error_msg)
 
 
@@ -340,7 +349,7 @@ async def send_password_reset_email(email: str, reset_url: str):
 async def send_account_deletion_email(email: str, confirm_url: str):
     """Send account deletion confirmation email"""
     import asyncio
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -436,10 +445,12 @@ async def send_account_deletion_email(email: str, confirm_url: str):
         body=html_content,
         subtype="html",
     )
-    
+
     try:
         # Add timeout to prevent hanging email sends
-        await asyncio.wait_for(fastmail.send_message(message), timeout=settings.mail_timeout)
+        await asyncio.wait_for(
+            fastmail.send_message(message), timeout=settings.mail_timeout
+        )
     except asyncio.TimeoutError:
         print(f"Account deletion email send timeout for {email}")
         raise Exception("Email sending timed out")

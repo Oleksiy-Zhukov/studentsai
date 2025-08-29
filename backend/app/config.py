@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     mail_ssl: bool = False
     mail_from_name: str = "StudentsAI"
     mail_timeout: int = 30  # Email sending timeout in seconds
+    mail_server: str = "smtp.gmail.com"  # SMTP server (can be changed to alternatives)
 
     # Google OAuth Configuration (NEW)
     google_client_id: str = "your-google-client-id"
