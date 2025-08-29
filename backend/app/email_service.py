@@ -12,6 +12,7 @@ from .database import get_db, Session
 from .auth import get_user_by_email, get_user_by_id
 import uuid
 
+
 def get_email_config():
     """Get email configuration dynamically to ensure environment variables are loaded"""
     return ConnectionConfig(
@@ -27,6 +28,7 @@ def get_email_config():
         # Optimize for Railway/cloud hosting
         TIMEOUT=settings.mail_timeout,  # Use configurable timeout from environment
     )
+
 
 def get_fastmail():
     """Get FastMail instance with current configuration"""

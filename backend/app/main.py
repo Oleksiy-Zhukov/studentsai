@@ -272,7 +272,7 @@ async def test_email_service(
 
     try:
         # Test basic email sending
-        from .email_service import fastmail, MessageSchema
+        from .email_service import get_fastmail, MessageSchema
         import asyncio
 
         message = MessageSchema(
@@ -282,7 +282,7 @@ async def test_email_service(
             subtype="html",
         )
 
-        await asyncio.wait_for(fastmail.send_message(message), timeout=30)
+        await asyncio.wait_for(get_fastmail().send_message(message), timeout=30)
 
         return {"status": "success", "message": f"Test email sent to {user.email}"}
 
