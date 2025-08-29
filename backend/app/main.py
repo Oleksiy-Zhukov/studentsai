@@ -300,6 +300,7 @@ async def test_email_config():
     return {
         "mail_username": settings.mail_username if settings.mail_username != "your-email@gmail.com" else "NOT_SET",
         "mail_from": settings.mail_from if settings.mail_from != "your-email@gmail.com" else "NOT_SET", 
+        "mail_server": settings.mail_server,
         "mail_port": settings.mail_port,
         "mail_tls": settings.mail_tls,
         "mail_ssl": settings.mail_ssl,
