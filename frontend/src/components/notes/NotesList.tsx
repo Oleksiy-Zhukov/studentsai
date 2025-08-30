@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 
 interface NotesListProps {
   notes: Note[]
@@ -22,16 +23,28 @@ interface NotesListProps {
 
 export function NotesList({ notes, onEdit, onDelete, onSelect, selectedNoteId }: NotesListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; noteId: string | null }>({
+    isOpen: false,
+    noteId: null
+  })
 
-  const handleDelete = async (noteId: string) => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
-      setDeletingId(noteId)
-      try {
-        await onDelete(noteId)
-      } finally {
-        setDeletingId(null)
-      }
+  const handleDeleteClick = (noteId: string) => {
+    setDeleteDialog({ isOpen: true, noteId })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.noteId) return
+    
+    setDeletingId(deleteDialog.noteId)
+    try {
+      await onDelete(deleteDialog.noteId)
+    } finally {
+      setDeletingId(null)
     }
+  }
+
+  const closeDeleteDialog = () => {
+    setDeleteDialog({ isOpen: false, noteId: null })
   }
 
   if (notes.length === 0) {
@@ -97,10 +110,10 @@ export function NotesList({ notes, onEdit, onDelete, onSelect, selectedNoteId }:
                 <DropdownMenuItem 
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation()
-                    handleDelete(note.id)
+                    handleDeleteClick(note.id)
                   }}
                   disabled={deletingId === note.id}
-                  className="text-red-600"
+                  className="text-red-600 dark:text-red-400"
                 >
                   <Trash2 className="h-3 w-3 mr-2" />
                   {deletingId === note.id ? 'Deleting...' : 'Delete'}
@@ -110,6 +123,18 @@ export function NotesList({ notes, onEdit, onDelete, onSelect, selectedNoteId }:
           </div>
         </div>
       ))}
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Note"
+        description="Are you sure you want to delete this note? This action cannot be undone and will also remove any associated flashcards."
+        confirmText="Delete Note"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   )
 }
