@@ -16,7 +16,8 @@ import uuid
 
 def get_sendgrid_client():
     """Get SendGrid client with current configuration"""
-    return SendGridAPIClient(api_key=settings.mail_password)
+    return SendGridAPIClient(api_key=settings.sendgrid_api_key)
+
 
 def send_email_via_sendgrid(to_email: str, subject: str, html_content: str):
     """Send email using SendGrid Web API"""
@@ -25,19 +26,19 @@ def send_email_via_sendgrid(to_email: str, subject: str, html_content: str):
             from_email=settings.mail_from,
             to_emails=to_email,
             subject=subject,
-            html_content=html_content
+            html_content=html_content,
         )
-        
+
         sg = get_sendgrid_client()
         response = sg.send(message)
-        
+
         if response.status_code in [200, 201, 202]:
             print(f"Successfully sent email to {to_email} via SendGrid")
             return True
         else:
             print(f"SendGrid API error: {response.status_code} - {response.body}")
             return False
-            
+
     except Exception as e:
         print(f"SendGrid email sending failed: {str(e)}")
         return False

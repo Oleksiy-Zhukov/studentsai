@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     mail_from_name: str = "StudentsAI"
     mail_timeout: int = 120  # Email sending timeout in seconds (2 minutes for slow connections)
     mail_server: str = "smtp.gmail.com"  # SMTP server (can be changed to alternatives)
+    sendgrid_api_key: str = "your-sendgrid-api-key"  # SendGrid API key for Web API
 
     # Google OAuth Configuration (NEW)
     google_client_id: str = "your-google-client-id"
