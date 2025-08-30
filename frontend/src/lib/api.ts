@@ -304,6 +304,12 @@ class APIClient {
     return this.request(`/notes/${noteId}/keywords`)
   }
 
+  async extractKeywords(noteId: string): Promise<Note> {
+    return this.request(`/notes/${noteId}/extract-keywords`, {
+      method: 'POST',
+    })
+  }
+
   async getBacklinks(noteId: string): Promise<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>> {
     return this.request(`/notes/${noteId}/backlinks`)
   }

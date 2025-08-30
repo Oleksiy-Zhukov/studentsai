@@ -1201,6 +1201,51 @@ async def summarize_note(
         )
 
 
+@app.post("/notes/{note_id}/extract-keywords", response_model=NoteResponse)
+async def extract_note_keywords(
+    note_id: uuid.UUID,
+    request: Request,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Extract keywords from a note using TF-IDF"""
+    await check_ai_rate_limit(request, str(user_id))
+
+    note = get_note_by_id(db, note_id, user_id)
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
+
+    try:
+        # Extract keywords using TF-IDF
+        from .ai_service import extract_keywords_from_text
+        keywords = extract_keywords_from_text(note.content)
+        
+        # Update note with keywords
+        updated_note = update_note(db, note, tags=keywords)
+        
+        try:
+            record_event(db, user_id, "NOTE_REVIEWED", target_id=note.id)
+        except Exception:
+            pass
+
+        return NoteResponse(
+            id=updated_note.id,
+            title=updated_note.title,
+            content=updated_note.content,
+            summary=updated_note.summary,
+            created_at=updated_note.created_at,
+            updated_at=updated_note.updated_at,
+            tags=updated_note.tags or [],
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to extract keywords: {str(e)}",
+        )
+
+
 # Flashcard endpoints
 @app.get("/notes/{note_id}/flashcards", response_model=List[FlashcardResponse])
 async def get_note_flashcards(

@@ -12,12 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
+import { KeywordsDisplay } from './KeywordsDisplay'
 
 interface NotesListProps {
   notes: Note[]
   onEdit: (note: Note) => void
   onDelete: (noteId: string) => void
   onSelect: (note: Note) => void
+  onRefreshKeywords?: (noteId: string) => Promise<void>
   selectedNoteId?: string
 }
 
@@ -79,11 +81,18 @@ export function NotesList({ notes, onEdit, onDelete, onSelect, selectedNoteId }:
             <p className="text-sm font-medium text-gray-900 truncate dark:text-gray-100">
               {note.title}
             </p>
-            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
               <span>{formatDate(note.updated_at)}</span>
               <span>•</span>
               <span>{getWordCount(note.content)} words</span>
             </div>
+            
+            {/* Keywords Display */}
+            <KeywordsDisplay 
+              note={note}
+              onRefreshKeywords={onRefreshKeywords ? () => onRefreshKeywords(note.id) : undefined}
+              className="text-xs"
+            />
           </div>
 
           {/* Actions */}
