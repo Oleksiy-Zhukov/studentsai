@@ -220,9 +220,9 @@ async def send_verification_email(email: str, username: str, verification_url: s
         success = send_email_via_sendgrid(
             to_email=email,
             subject="Verify Your Email - StudentsAI",
-            html_content=html_content
+            html_content=html_content,
         )
-        
+
         if success:
             print(f"Successfully sent verification email to {email}")
         else:

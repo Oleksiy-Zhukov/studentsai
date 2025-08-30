@@ -553,9 +553,33 @@ def update_note(
 
 
 def delete_note(db: Session, note: Note):
-    """Delete note"""
-    db.delete(note)
-    db.commit()
+    """Delete note and all related data"""
+    try:
+        # First delete related flashcards and their SRS data
+        flashcards = db.query(Flashcard).filter(Flashcard.note_id == note.id).all()
+        for flashcard in flashcards:
+            # Delete SRS data first
+            db.query(FlashcardSRS).filter(FlashcardSRS.flashcard_id == flashcard.id).delete()
+            # Delete the flashcard
+            db.delete(flashcard)
+        
+        # Delete note similarities
+        db.query(NoteSimilarity).filter(
+            (NoteSimilarity.note_a_id == note.id) | (NoteSimilarity.note_b_id == note.id)
+        ).delete()
+        
+        # Delete note links
+        db.query(NoteLink).filter(
+            (NoteLink.from_note_id == note.id) | (NoteLink.to_note_id == note.id)
+        ).delete()
+        
+        # Finally delete the note
+        db.delete(note)
+        db.commit()
+        
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"Failed to delete note: {str(e)}")
 
 
 def get_flashcards_by_note(db: Session, note_id: uuid.UUID):
