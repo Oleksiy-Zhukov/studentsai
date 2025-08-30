@@ -213,40 +213,24 @@ async def send_verification_email(email: str, username: str, verification_url: s
     </html>
     """
 
-    message = MessageSchema(
-        subject="Verify Your Email - StudentsAI",
-        recipients=[email],
-        body=html_content,
-        subtype="html",
-    )
-
     try:
         print(f"Attempting to send verification email to {email}")
-        print(
-            f"SMTP config: {settings.mail_username}@{settings.mail_server}:{settings.mail_port} (TLS: {settings.mail_tls})"
-        )
 
-        # Add timeout to prevent hanging email sends
-        await asyncio.wait_for(
-            get_fastmail().send_message(message), timeout=settings.mail_timeout
+        # Send email using SendGrid Web API
+        success = send_email_via_sendgrid(
+            to_email=email,
+            subject="Verify Your Email - StudentsAI",
+            html_content=html_content
         )
-        print(f"Successfully sent verification email to {email}")
+        
+        if success:
+            print(f"Successfully sent verification email to {email}")
+        else:
+            raise Exception("SendGrid email sending failed")
 
-    except asyncio.TimeoutError:
-        error_msg = f"SMTP connection timeout to {settings.mail_server}:{settings.mail_port} after {settings.mail_timeout}s"
-        print(error_msg)
-        raise Exception(error_msg)
     except Exception as e:
-        error_msg = f"SMTP connection failed to {settings.mail_server}: {str(e)} (Type: {type(e).__name__})"
-        print(error_msg)
-
-        # If Gmail fails, suggest alternatives
-        if "gmail" in settings.mail_server.lower():
-            print(
-                "Gmail SMTP may be blocked. Consider using SendGrid, Mailgun, or AWS SES for production."
-            )
-
-        raise Exception(error_msg)
+        print(f"Verification email send failed for {email}: {str(e)}")
+        raise Exception(f"Email sending failed: {str(e)}")
 
 
 async def send_password_change_notification(email: str, username: str):
