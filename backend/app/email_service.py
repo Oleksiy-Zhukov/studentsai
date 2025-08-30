@@ -457,21 +457,17 @@ async def send_account_deletion_email(email: str, confirm_url: str):
     </html>
     """
 
-    message = MessageSchema(
-        subject="Confirm Account Deletion - StudentsAI",
-        recipients=[email],
-        body=html_content,
-        subtype="html",
-    )
-
     try:
-        # Add timeout to prevent hanging email sends
-        await asyncio.wait_for(
-            get_fastmail().send_message(message), timeout=settings.mail_timeout
+        # Send email using SendGrid Web API
+        success = send_email_via_sendgrid(
+            to_email=email,
+            subject="Confirm Account Deletion - StudentsAI",
+            html_content=html_content,
         )
-    except asyncio.TimeoutError:
-        print(f"Account deletion email send timeout for {email}")
-        raise Exception("Email sending timed out")
+
+        if not success:
+            raise Exception("SendGrid email sending failed")
+
     except Exception as e:
         print(f"Account deletion email send failed for {email}: {str(e)}")
         raise

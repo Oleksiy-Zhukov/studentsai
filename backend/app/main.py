@@ -272,17 +272,16 @@ async def test_email_service(
 
     try:
         # Test basic email sending
-        from .email_service import get_fastmail, MessageSchema
-        import asyncio
+        from .email_service import send_email_via_sendgrid
 
-        message = MessageSchema(
+        success = send_email_via_sendgrid(
+            to_email=user.email,
             subject="Email Service Test - StudentsAI",
-            recipients=[user.email],
-            body="<h2>Email Test</h2><p>If you received this, your email service is working!</p>",
-            subtype="html",
+            html_content="<h2>Email Test</h2><p>If you received this, your email service is working!</p>",
         )
 
-        await asyncio.wait_for(get_fastmail().send_message(message), timeout=30)
+        if not success:
+            raise Exception("SendGrid email sending failed")
 
         return {"status": "success", "message": f"Test email sent to {user.email}"}
 
