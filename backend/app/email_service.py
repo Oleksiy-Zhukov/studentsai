@@ -1,8 +1,9 @@
 """
-Email service for sending verification emails using fastapi-mail
+Email service for sending verification emails using SendGrid Web API
 """
 
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content, HtmlContent
 from pydantic import EmailStr
 import jwt
 from datetime import datetime, timedelta
@@ -13,26 +14,33 @@ from .auth import get_user_by_email, get_user_by_id
 import uuid
 
 
-def get_email_config():
-    """Get email configuration dynamically to ensure environment variables are loaded"""
-    return ConnectionConfig(
-        MAIL_USERNAME=settings.mail_username,
-        MAIL_PASSWORD=settings.mail_password,
-        MAIL_FROM=settings.mail_from,
-        MAIL_PORT=587,  # Force port 587 for TLS
-        MAIL_SERVER=settings.mail_server,
-        MAIL_STARTTLS=True,  # Force STARTTLS
-        MAIL_SSL_TLS=False,  # Disable SSL, use STARTTLS instead
-        USE_CREDENTIALS=True,
-        VALIDATE_CERTS=True,
-        # Optimize for Railway/cloud hosting
-        TIMEOUT=settings.mail_timeout,  # Use configurable timeout from environment
-    )
+def get_sendgrid_client():
+    """Get SendGrid client with current configuration"""
+    return SendGridAPIClient(api_key=settings.mail_password)
 
-
-def get_fastmail():
-    """Get FastMail instance with current configuration"""
-    return FastMail(get_email_config())
+def send_email_via_sendgrid(to_email: str, subject: str, html_content: str):
+    """Send email using SendGrid Web API"""
+    try:
+        message = Mail(
+            from_email=settings.mail_from,
+            to_emails=to_email,
+            subject=subject,
+            html_content=html_content
+        )
+        
+        sg = get_sendgrid_client()
+        response = sg.send(message)
+        
+        if response.status_code in [200, 201, 202]:
+            print(f"Successfully sent email to {to_email} via SendGrid")
+            return True
+        else:
+            print(f"SendGrid API error: {response.status_code} - {response.body}")
+            return False
+            
+    except Exception as e:
+        print(f"SendGrid email sending failed: {str(e)}")
+        return False
 
 
 def create_verification_token(email: str) -> str:
