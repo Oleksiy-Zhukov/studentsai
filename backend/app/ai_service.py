@@ -306,7 +306,7 @@ async def generate_flashcards_from_content(
 
 def calculate_note_similarities(notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Calculate similarities between notes"""
-    return ai_service.find_note_similarities(notes)
+    return ai_service.find_note_connections(notes)
 
 
 def extract_keywords_from_text(text: str, max_keywords: int = 12) -> List[str]:

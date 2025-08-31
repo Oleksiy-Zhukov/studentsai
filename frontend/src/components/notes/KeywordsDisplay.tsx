@@ -29,7 +29,7 @@ export function KeywordsDisplay({
     
     setIsRefreshing(true)
     try {
-      await onRefreshKeywords()
+      await onRefreshKeywords(note.id)
     } finally {
       setIsRefreshing(false)
     }
