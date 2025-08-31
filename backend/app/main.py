@@ -1223,7 +1223,7 @@ async def extract_note_keywords(
         keywords = extract_keywords_from_text(note.content)
 
         # Update note with keywords
-        updated_note = update_note(db, note, tags=keywords)
+        updated_note = set_note_tags(db, note, keywords)
 
         try:
             record_event(db, user_id, "NOTE_REVIEWED", target_id=note.id)
