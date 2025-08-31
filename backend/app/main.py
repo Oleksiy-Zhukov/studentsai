@@ -150,6 +150,7 @@ from .ai_service import (
     summarize_content,
     generate_flashcards_from_content,
     calculate_note_similarities,
+    extract_keywords_from_text,
     ai_service,
 )
 from .email_service import (
@@ -1219,8 +1220,6 @@ async def extract_note_keywords(
 
     try:
         # Extract keywords using TF-IDF
-        from .ai_service import extract_keywords_from_text
-
         keywords = extract_keywords_from_text(note.content)
 
         # Update note with keywords
