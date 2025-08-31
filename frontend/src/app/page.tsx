@@ -121,6 +121,19 @@ export default function Home() {
     }
   }
 
+  const handleRefreshKeywords = async (noteId: string) => {
+    try {
+      const updatedNote = await api.extractKeywords(noteId)
+      setNotes(notes.map(note => note.id === noteId ? updatedNote : note))
+      if (selectedNote?.id === noteId) {
+        setSelectedNote(updatedNote)
+      }
+    } catch (error) {
+      console.error('Failed to extract keywords:', error)
+      alert('Failed to extract keywords')
+    }
+  }
+
   const handleSelectNote = (note: Note) => {
     setSelectedNote(note)
     setCurrentView('notes') // Stay on notes view but show note details
@@ -307,6 +320,7 @@ export default function Home() {
               onEdit={handleEditNote}
               onDelete={handleDeleteNote}
               onSelect={handleSelectNote}
+              onRefreshKeywords={handleRefreshKeywords}
               selectedNoteId={selectedNote?.id}
             />
           </div>
