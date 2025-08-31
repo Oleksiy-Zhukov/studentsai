@@ -30,14 +30,14 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     try {
       if (isLogin) {
         const response = await api.login(email, password)
-        // Store user data in localStorage (required by main app)
+        // API client already stores the token, just store user data
         if (typeof window !== 'undefined' && response.user) {
           localStorage.setItem('user', JSON.stringify(response.user))
         }
         onSuccess()
       } else {
         const response = await api.register(email, password, username)
-        // Store user data in localStorage for registration too
+        // API client already stores the token, just store user data
         if (typeof window !== 'undefined' && response.user) {
           localStorage.setItem('user', JSON.stringify(response.user))
         }
