@@ -551,6 +551,18 @@ export default function Home() {
                               </div>
                             )}
                           </div>
+
+                          {/* Keywords */}
+                          <div>
+                            <h3 className="font-medium text-gray-900 mb-2 dark:text-gray-100">Keywords</h3>
+                            {selectedNote && (
+                              <KeywordsDisplay 
+                                note={selectedNote}
+                                onRefreshKeywords={handleRefreshKeywords}
+                                className="text-sm"
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

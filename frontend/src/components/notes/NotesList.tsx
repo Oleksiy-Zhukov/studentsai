@@ -87,12 +87,7 @@ export function NotesList({ notes, onEdit, onDelete, onSelect, onRefreshKeywords
               <span>{getWordCount(note.content)} words</span>
             </div>
             
-            {/* Keywords Display */}
-            <KeywordsDisplay 
-              note={note}
-              onRefreshKeywords={onRefreshKeywords ? () => onRefreshKeywords(note.id) : undefined}
-              className="text-xs"
-            />
+
           </div>
 
           {/* Actions */}

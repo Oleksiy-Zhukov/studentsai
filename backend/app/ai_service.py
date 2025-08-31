@@ -306,7 +306,12 @@ async def generate_flashcards_from_content(
 
 def calculate_note_similarities(notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Calculate similarities between notes"""
-    return ai_service.find_note_connections(notes)
+    return ai_service.find_note_similarities(notes)
+
+
+def extract_keywords_from_text(text: str, max_keywords: int = 12) -> List[str]:
+    """Extract keywords from text using TF-IDF"""
+    return ai_service.extract_keywords(text, max_keywords)
 
 
 async def evaluate_answer_with_llm(prompt: str) -> str:
