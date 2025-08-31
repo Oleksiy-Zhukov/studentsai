@@ -1220,11 +1220,12 @@ async def extract_note_keywords(
     try:
         # Extract keywords using TF-IDF
         from .ai_service import extract_keywords_from_text
+
         keywords = extract_keywords_from_text(note.content)
-        
+
         # Update note with keywords
         updated_note = update_note(db, note, tags=keywords)
-        
+
         try:
             record_event(db, user_id, "NOTE_REVIEWED", target_id=note.id)
         except Exception:
