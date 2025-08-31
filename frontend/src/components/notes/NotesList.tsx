@@ -23,7 +23,7 @@ interface NotesListProps {
   selectedNoteId?: string
 }
 
-export function NotesList({ notes, onEdit, onDelete, onSelect, selectedNoteId }: NotesListProps) {
+export function NotesList({ notes, onEdit, onDelete, onSelect, onRefreshKeywords, selectedNoteId }: NotesListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; noteId: string | null }>({
     isOpen: false,
