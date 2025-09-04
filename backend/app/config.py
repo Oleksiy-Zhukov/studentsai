@@ -17,8 +17,12 @@ class Settings(BaseSettings):
     # JWT
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 480  # 8 hours for long lectures and study sessions
-    verification_token_expire_minutes: int = 1440  # 24 hours for email verification token expiry
+    access_token_expire_minutes: int = (
+        480  # 8 hours for long lectures and study sessions
+    )
+    verification_token_expire_minutes: int = (
+        1440  # 24 hours for email verification token expiry
+    )
 
     # Email Configuration (NEW)
     mail_username: str = "your-email@gmail.com"
@@ -28,7 +32,9 @@ class Settings(BaseSettings):
     mail_tls: bool = True
     mail_ssl: bool = False
     mail_from_name: str = "StudentsAI"
-    mail_timeout: int = 120  # Email sending timeout in seconds (2 minutes for slow connections)
+    mail_timeout: int = (
+        120  # Email sending timeout in seconds (2 minutes for slow connections)
+    )
     mail_server: str = "smtp.gmail.com"  # SMTP server (can be changed to alternatives)
     sendgrid_api_key: str = "your-sendgrid-api-key"  # SendGrid API key for Web API
 
