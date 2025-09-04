@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type Note, type User, APIError } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { WysiwygViewer } from '@/components/notes/WysiwygViewer'
 import { Plus, FileText, Network, Search, FolderOpen, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -428,53 +429,12 @@ export default function Home() {
                             </div>
                           )}
                           
-                          <div className="prose prose-orange max-w-none dark:prose-invert">
-                            <div className="text-gray-700 leading-relaxed pb-24 dark:text-gray-200">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  a: ({ href, children, ...props }) => {
-                                    if (href && href.startsWith('#note=')) {
-                                      const title = decodeURIComponent(href.replace('#note=', ''))
-                                      return (
-                                        <a
-                                          href={href}
-                                          className="text-orange-600 underline dark:text-orange-400"
-                                          onClick={(e) => {
-                                            e.preventDefault()
-                                            if (typeof window !== 'undefined') {
-                                              window.location.hash = `note=${encodeURIComponent(title)}`
-                                            }
-                                            navigateToTitle(title)
-                                          }}
-                                          {...props}
-                                        >
-                                          {children}
-                                        </a>
-                                      )
-                                    }
-                                    return (
-                                      <a
-                                        href={href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-orange-600 underline dark:text-orange-400"
-                                        {...props}
-                                      >
-                                        {children}
-                                      </a>
-                                    )
-                                  },
-                                  p: ({ children }) => <p className="leading-relaxed">{children}</p>,
-                                  img: (props) => (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200 dark:border-[#232a36]" />
-                                  ),
-                                }}
-                              >
-                                {transformWikiLinksToMarkdown(selectedNote.content)}
-                              </ReactMarkdown>
-                            </div>
+                          <div className="pb-24">
+                            <WysiwygViewer
+                              content={selectedNote.content}
+                              onNavigateByTitle={navigateToTitle}
+                              className="text-gray-700 leading-relaxed dark:text-gray-200"
+                            />
                           </div>
                         </div>
                       </div>

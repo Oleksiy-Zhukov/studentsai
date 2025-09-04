@@ -222,12 +222,12 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle, showNote
             <span className="text-sm text-gray-500 dark:text-gray-400">{wordCount} words</span>
           </div>
           
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <WysiwygEditor
               content={content}
               onChange={setContent}
               placeholder="Start writing your notes here..."
-              className="h-full"
+              className="h-full overflow-y-auto"
               autoFocus={!isEditing} // Auto-focus for new notes
             />
           </div>
