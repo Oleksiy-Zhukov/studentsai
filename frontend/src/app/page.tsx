@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type Note, type User, APIError } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Plus, FileText, Network, Search, FolderOpen, ArrowLeft } from 'lucide-react'
+import { Plus, FileText, Network, Search, FolderOpen, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 
@@ -29,6 +29,7 @@ export default function Home() {
   const [backlinks, setBacklinks] = useState<Array<{ note_id: string; title: string; excerpt?: string; created_at: string }>>([])
   const [tagsSaving, setTagsSaving] = useState(false)
   const [navHistory, setNavHistory] = useState<string[]>([])
+  const [showNotesPanel, setShowNotesPanel] = useState(true)
 
   useEffect(() => {
     // Check for existing auth
@@ -285,7 +286,8 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Sidebar - File Explorer */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col dark:bg-[#141820] dark:border-[#232a36]">
+        {showNotesPanel && (
+          <div className="w-80 bg-white border-r border-gray-200 flex flex-col dark:bg-[#141820] dark:border-[#232a36]">
           {/* Search Bar */}
           <div className="p-4 border-b border-gray-200 dark:border-[#232a36]">
             <div className="relative">
@@ -325,7 +327,8 @@ export default function Home() {
               selectedNoteId={selectedNote?.id}
             />
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-h-0">
@@ -335,6 +338,8 @@ export default function Home() {
               onSave={handleSaveNote}
               onCancel={() => setCurrentView('notes')}
               onNavigateByTitle={navigateToTitle}
+              showNotesPanel={showNotesPanel}
+              onToggleNotesPanel={() => setShowNotesPanel(!showNotesPanel)}
             />
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
@@ -342,6 +347,16 @@ export default function Home() {
               <div className="bg-white border-b border-gray-200 px-6 py-3 dark:bg-[#141820] dark:border-[#232a36]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
+                    {/* Panel Toggle Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNotesPanel(!showNotesPanel)}
+                      className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+                      title={showNotesPanel ? "Hide notes panel" : "Show notes panel"}
+                    >
+                      {showNotesPanel ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                    </Button>
                     <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as View)}>
                       <TabsList className="bg-gray-100 dark:bg-[#0f1115] dark:border dark:border-[#232a36]">
                         <TabsTrigger value="notes" className="flex items-center space-x-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white dark:data-[state=active]:bg-orange-600 dark:data-[state=active]:text-white">

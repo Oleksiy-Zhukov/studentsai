@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { api, type Note } from '@/lib/api'
-import { Save, FileText, X, Eye, Edit } from 'lucide-react'
+import { Save, FileText, X, Eye, Edit, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import Image from 'next/image'
 import { getWordCount } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -17,18 +17,49 @@ interface NoteEditorProps {
   onSave: (note: Note) => void
   onCancel: () => void
   onNavigateByTitle?: (title: string) => void
+  showNotesPanel?: boolean
+  onToggleNotesPanel?: () => void
 }
 
-export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEditorProps) {
+export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle, showNotesPanel, onToggleNotesPanel }: NoteEditorProps) {
   const [title, setTitle] = useState(note?.title || '')
   const [content, setContent] = useState(note?.content || '')
   const [loading, setLoading] = useState(false)
   const [summarizing, setSummarizing] = useState(false)
   const [error, setError] = useState('')
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit')
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   const wordCount = getWordCount(content)
   const isEditing = !!note
+
+  // Auto-save functionality
+  const performAutoSave = async () => {
+    if (!title.trim() || !content.trim() || !isEditing) return
+
+    setAutoSaving(true)
+    try {
+      const savedNote = await api.updateNote(note.id, { title, content })
+      setLastSaved(new Date())
+      onSave(savedNote)
+    } catch (err) {
+      console.error('Auto-save failed:', err)
+    } finally {
+      setAutoSaving(false)
+    }
+  }
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!isEditing || (!title.trim() && !content.trim())) return
+
+    const autoSaveTimer = setTimeout(() => {
+      performAutoSave()
+    }, 3000) // Auto-save after 3 seconds of no typing
+
+    return () => clearTimeout(autoSaveTimer)
+  }, [title, content, isEditing])
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -92,9 +123,34 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
             <span className="font-medium text-gray-900 dark:text-gray-100">
               {isEditing ? 'Edit Note' : 'Create New Note'}
             </span>
+            {/* Auto-save status indicator */}
+            {isEditing && (
+              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                {autoSaving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b border-orange-500"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : lastSaved ? (
+                  <span>Saved {lastSaved.toLocaleTimeString()}</span>
+                ) : null}
+              </div>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
+            {/* Panel Toggle Button */}
+            {onToggleNotesPanel && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggleNotesPanel}
+                className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+                title={showNotesPanel ? "Hide notes panel" : "Show notes panel"}
+              >
+                {showNotesPanel ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -139,6 +195,12 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Note title..."
                 className="text-2xl font-semibold border-0 border-b border-gray-200 rounded-none px-0 py-2 focus:ring-0 focus:border-gray-400 dark:bg-[#141820] dark:text-gray-100 dark:border-[#232a36] dark:placeholder:text-gray-500 dark:focus:border-gray-500"
+                spellCheck={true}
+                autoCorrect="on"
+                autoCapitalize="words"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                }}
               />
             </div>
 
@@ -172,6 +234,14 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                 }}
                 placeholder="Start writing your notes here..."
                 className="flex-1 resize-none border-0 focus:ring-0 text-gray-700 leading-relaxed dark:bg-[#0f1115] dark:text-gray-100 dark:placeholder:text-gray-500"
+                spellCheck={true}
+                autoCorrect="on"
+                autoCapitalize="sentences"
+                style={{
+                  fontSize: '16px',
+                  lineHeight: '1.6',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                }}
               />
             </div>
 
@@ -213,7 +283,13 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                 </div>
               )}
               
-              <div className="prose prose-orange max-w-none dark:prose-invert">
+              <div 
+                className="prose prose-orange max-w-none dark:prose-invert prose-lg"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                  lineHeight: '1.6'
+                }}
+              >
                 {content ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -224,7 +300,7 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                           return (
                             <a
                               href={href}
-                              className="text-orange-600 underline dark:text-orange-400"
+                              className="text-orange-600 underline hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
                               onClick={(e) => {
                                 e.preventDefault()
                                 if (typeof window !== 'undefined') {
@@ -238,19 +314,43 @@ export function NoteEditor({ note, onSave, onCancel, onNavigateByTitle }: NoteEd
                             </a>
                           )
                         }
-                        return <a className="text-orange-600 underline dark:text-orange-400" href={href} {...props}>{children}</a>
+                        return <a className="text-orange-600 underline hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors" href={href} {...props}>{children}</a>
                       },
-                      p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                      p: ({ children }) => <p className="leading-relaxed mb-4 text-gray-800 dark:text-gray-200">{children}</p>,
+                      h1: ({ children }) => <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-xl font-medium mb-3 text-gray-900 dark:text-gray-100">{children}</h3>,
+                      ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="text-gray-800 dark:text-gray-200">{children}</li>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-orange-500 pl-4 italic text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 py-2 my-4 rounded-r">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children }) => (
+                        <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-orange-600 dark:text-orange-400">
+                          {children}
+                        </code>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-auto mb-4 border border-gray-200 dark:border-gray-700">
+                          {children}
+                        </pre>
+                      ),
                       img: (props) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img {...props} alt={props.alt || ''} className="max-w-full rounded border border-gray-200 dark:border-[#232a36]" />
+                        <img {...props} alt={props.alt || ''} className="max-w-full rounded-lg shadow-md border border-gray-200 dark:border-[#232a36] my-4" />
                       ),
                     }}
                   >
                     {transformWikiLinksToMarkdown(content)}
                   </ReactMarkdown>
                 ) : (
-                  <div className="text-gray-500 dark:text-gray-400">No content yet...</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Start writing to see your preview here...</p>
+                  </div>
                 )}
               </div>
             </div>
