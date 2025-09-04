@@ -61,7 +61,7 @@ export function Header({ user, onLogout, context = 'notes' }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
-                <span className="hidden sm:inline text-gray-700 dark:text-gray-300">{user.email}</span>
+                <span className="hidden sm:inline text-gray-700 dark:text-gray-300">{user.username}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

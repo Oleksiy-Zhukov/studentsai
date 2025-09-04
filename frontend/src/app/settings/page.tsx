@@ -41,7 +41,7 @@ export default function SettingsPage() {
     <main className="min-h-screen bg-gray-50 dark:bg-[#0f1115]">
       {/* Header with context-aware navigation */}
       <Header 
-        user={{ id: user.id, email: user.email, created_at: user.created_at }} 
+        user={{ id: user.id, email: user.email, username: user.username || '', created_at: user.created_at }} 
         onLogout={() => { localStorage.clear(); window.location.replace('/landing') }}
         context="settings"
       />
