@@ -94,7 +94,7 @@ export default function ProfilePage() {
       {/* Shared header, context=profile to show Notes/Settings */}
       {user ? (
         <Header
-          user={{ id: user.id, email: user.email, created_at: '' } as any}
+          user={{ id: user.id, email: user.email, username: user.username || '', created_at: '' } as any}
           onLogout={() => { localStorage.clear(); window.location.replace('/landing') }}
           context="profile"
         />
