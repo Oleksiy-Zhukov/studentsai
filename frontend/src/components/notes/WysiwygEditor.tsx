@@ -60,6 +60,8 @@ export function WysiwygEditor({
           line-height: 1.6;
           font-size: 16px;
           min-height: 200px;
+          max-height: 70vh;
+          overflow-y: auto;
           padding: 1rem;
         `,
         spellcheck: 'true',
