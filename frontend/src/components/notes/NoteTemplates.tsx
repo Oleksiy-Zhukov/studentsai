@@ -70,38 +70,48 @@ const templates: NoteTemplate[] = [
     name: 'Lecture Notes',
     description: 'Template for academic lecture notes with key concepts',
     icon: <BookOpen className="h-5 w-5" />,
-    content: `# [Subject] - [Topic]
+    content: `<h1>[Subject] - [Topic]</h1>
 
-**Date:** [Date]
-**Instructor:** [Instructor name]
-**Course:** [Course name]
+<p><strong>Date:</strong> [Date]<br>
+<strong>Instructor:</strong> [Instructor name]<br>
+<strong>Course:</strong> [Course name]</p>
 
-## Learning Objectives
-- [Objective 1]
-- [Objective 2]
-- [Objective 3]
+<h2>Learning Objectives</h2>
+<ul>
+<li>[Objective 1]</li>
+<li>[Objective 2]</li>
+<li>[Objective 3]</li>
+</ul>
 
-## Key Concepts
-### [Concept 1]
-- Definition: [Definition]
-- Example: [Example]
-- Application: [How it's used]
+<h2>Key Concepts</h2>
+<h3>[Concept 1]</h3>
+<ul>
+<li>Definition: [Definition]</li>
+<li>Example: [Example]</li>
+<li>Application: [How it's used]</li>
+</ul>
 
-### [Concept 2]
-- Definition: [Definition]
-- Example: [Example]
-- Application: [How it's used]
+<h3>[Concept 2]</h3>
+<ul>
+<li>Definition: [Definition]</li>
+<li>Example: [Example]</li>
+<li>Application: [How it's used]</li>
+</ul>
 
-## Important Formulas/Equations
-- [Formula 1]: [Explanation]
-- [Formula 2]: [Explanation]
+<h2>Important Formulas/Equations</h2>
+<ul>
+<li>[Formula 1]: [Explanation]</li>
+<li>[Formula 2]: [Explanation]</li>
+</ul>
 
-## Questions & Clarifications
-- [Question 1]
-- [Question 2]
+<h2>Questions & Clarifications</h2>
+<ul>
+<li>[Question 1]</li>
+<li>[Question 2]</li>
+</ul>
 
-## Summary
-[Key takeaways from the lecture]`,
+<h2>Summary</h2>
+<p>[Key takeaways from the lecture]</p>`,
     tags: ['academic', 'lecture', 'education']
   },
   {
@@ -109,47 +119,59 @@ const templates: NoteTemplate[] = [
     name: 'Project Plan',
     description: 'Comprehensive project planning and tracking template',
     icon: <Target className="h-5 w-5" />,
-    content: `# [Project Name] - Project Plan
+    content: `<h1>[Project Name] - Project Plan</h1>
 
-**Project Manager:** [Name]
-**Start Date:** [Date]
-**Target Completion:** [Date]
-**Status:** [Planning/In Progress/On Hold/Completed]
+<p><strong>Project Manager:</strong> [Name]<br>
+<strong>Start Date:</strong> [Date]<br>
+<strong>Target Completion:</strong> [Date]<br>
+<strong>Status:</strong> [Planning/In Progress/On Hold/Completed]</p>
 
-## Project Overview
-**Objective:** [Project objective]
-**Scope:** [What's included and excluded]
-**Success Criteria:** [How success is measured]
+<h2>Project Overview</h2>
+<p><strong>Objective:</strong> [Project objective]<br>
+<strong>Scope:</strong> [What's included and excluded]<br>
+<strong>Success Criteria:</strong> [How success is measured]</p>
 
-## Team & Roles
-- [Role 1]: [Name] - [Responsibilities]
-- [Role 2]: [Name] - [Responsibilities]
+<h2>Team & Roles</h2>
+<ul>
+<li>[Role 1]: [Name] - [Responsibilities]</li>
+<li>[Role 2]: [Name] - [Responsibilities]</li>
+</ul>
 
-## Timeline & Milestones
-- [ ] [Milestone 1] - [Due date]
-- [ ] [Milestone 2] - [Due date]
-- [ ] [Milestone 3] - [Due date]
+<h2>Timeline & Milestones</h2>
+<ul>
+<li>[ ] [Milestone 1] - [Due date]</li>
+<li>[ ] [Milestone 2] - [Due date]</li>
+<li>[ ] [Milestone 3] - [Due date]</li>
+</ul>
 
-## Tasks & Deliverables
-### Phase 1: [Phase name]
-- [ ] [Task 1] - [Assignee] - [Due date]
-- [ ] [Task 2] - [Assignee] - [Due date]
+<h2>Tasks & Deliverables</h2>
+<h3>Phase 1: [Phase name]</h3>
+<ul>
+<li>[ ] [Task 1] - [Assignee] - [Due date]</li>
+<li>[ ] [Task 2] - [Assignee] - [Due date]</li>
+</ul>
 
-### Phase 2: [Phase name]
-- [ ] [Task 1] - [Assignee] - [Due date]
-- [ ] [Task 2] - [Assignee] - [Due date]
+<h3>Phase 2: [Phase name]</h3>
+<ul>
+<li>[ ] [Task 1] - [Assignee] - [Due date]</li>
+<li>[ ] [Task 2] - [Assignee] - [Due date]</li>
+</ul>
 
-## Resources & Budget
-- **Budget:** [Amount]
-- **Resources needed:** [List resources]
-- **Tools & Software:** [List tools]
+<h2>Resources & Budget</h2>
+<ul>
+<li><strong>Budget:</strong> [Amount]</li>
+<li><strong>Resources needed:</strong> [List resources]</li>
+<li><strong>Tools & Software:</strong> [List tools]</li>
+</ul>
 
-## Risks & Mitigation
-- **Risk 1:** [Description] - [Mitigation strategy]
-- **Risk 2:** [Description] - [Mitigation strategy]
+<h2>Risks & Mitigation</h2>
+<ul>
+<li><strong>Risk 1:</strong> [Description] - [Mitigation strategy]</li>
+<li><strong>Risk 2:</strong> [Description] - [Mitigation strategy]</li>
+</ul>
 
-## Notes
-[Additional project notes]`,
+<h2>Notes</h2>
+<p>[Additional project notes]</p>`,
     tags: ['project', 'planning', 'management']
   },
   {
@@ -157,34 +179,42 @@ const templates: NoteTemplate[] = [
     name: 'Daily Journal',
     description: 'Personal daily reflection and planning template',
     icon: <Calendar className="h-5 w-5" />,
-    content: `# [Date] - Daily Journal
+    content: `<h1>[Date] - Daily Journal</h1>
 
-## Today's Goals
-- [ ] [Goal 1]
-- [ ] [Goal 2]
-- [ ] [Goal 3]
+<h2>Today's Goals</h2>
+<ul>
+<li>[ ] [Goal 1]</li>
+<li>[ ] [Goal 2]</li>
+<li>[ ] [Goal 3]</li>
+</ul>
 
-## What I Accomplished
-- [Accomplishment 1]
-- [Accomplishment 2]
-- [Accomplishment 3]
+<h2>What I Accomplished</h2>
+<ul>
+<li>[Accomplishment 1]</li>
+<li>[Accomplishment 2]</li>
+<li>[Accomplishment 3]</li>
+</ul>
 
-## Challenges & Learnings
-**Challenge:** [What was difficult]
-**Learning:** [What I learned from it]
+<h2>Challenges & Learnings</h2>
+<p><strong>Challenge:</strong> [What was difficult]<br>
+<strong>Learning:</strong> [What I learned from it]</p>
 
-## Gratitude
-- [Thing I'm grateful for 1]
-- [Thing I'm grateful for 2]
-- [Thing I'm grateful for 3]
+<h2>Gratitude</h2>
+<ul>
+<li>[Thing I'm grateful for 1]</li>
+<li>[Thing I'm grateful for 2]</li>
+<li>[Thing I'm grateful for 3]</li>
+</ul>
 
-## Tomorrow's Focus
-- [Priority 1]
-- [Priority 2]
-- [Priority 3]
+<h2>Tomorrow's Focus</h2>
+<ul>
+<li>[Priority 1]</li>
+<li>[Priority 2]</li>
+<li>[Priority 3]</li>
+</ul>
 
-## Reflection
-[How I'm feeling and what I want to improve]`,
+<h2>Reflection</h2>
+<p>[How I'm feeling and what I want to improve]</p>`,
     tags: ['personal', 'journal', 'reflection']
   },
   {
@@ -192,43 +222,51 @@ const templates: NoteTemplate[] = [
     name: 'Idea Capture',
     description: 'Quick template for capturing and developing ideas',
     icon: <Lightbulb className="h-5 w-5" />,
-    content: `# [Idea Title]
+    content: `<h1>[Idea Title]</h1>
 
-**Date:** [Date]
-**Status:** [New/In Development/Testing/Implemented/Abandoned]
+<p><strong>Date:</strong> [Date]<br>
+<strong>Status:</strong> [New/In Development/Testing/Implemented/Abandoned]</p>
 
-## The Idea
-[Describe the core idea in 1-2 sentences]
+<h2>The Idea</h2>
+<p>[Describe the core idea in 1-2 sentences]</p>
 
-## Problem It Solves
-[What problem does this idea address?]
+<h2>Problem It Solves</h2>
+<p>[What problem does this idea address?]</p>
 
-## Target Audience
-[Who would benefit from this idea?]
+<h2>Target Audience</h2>
+<p>[Who would benefit from this idea?]</p>
 
-## Implementation Approach
-[How could this be implemented?]
+<h2>Implementation Approach</h2>
+<p>[How could this be implemented?]</p>
 
-## Resources Needed
-- [Resource 1]
-- [Resource 2]
-- [Resource 3]
+<h2>Resources Needed</h2>
+<ul>
+<li>[Resource 1]</li>
+<li>[Resource 2]</li>
+<li>[Resource 3]</li>
+</ul>
 
-## Potential Challenges
-- [Challenge 1]
-- [Challenge 2]
+<h2>Potential Challenges</h2>
+<ul>
+<li>[Challenge 1]</li>
+<li>[Challenge 2]</li>
+</ul>
 
-## Next Steps
-- [ ] [Action 1]
-- [ ] [Action 2]
-- [ ] [Action 3]
+<h2>Next Steps</h2>
+<ul>
+<li>[ ] [Action 1]</li>
+<li>[ ] [Action 2]</li>
+<li>[ ] [Action 3]</li>
+</ul>
 
-## Related Ideas
-- [Related idea 1]
-- [Related idea 2]
+<h2>Related Ideas</h2>
+<ul>
+<li>[Related idea 1]</li>
+<li>[Related idea 2]</li>
+</ul>
 
-## Notes
-[Additional thoughts and considerations]`,
+<h2>Notes</h2>
+<p>[Additional thoughts and considerations]</p>`,
     tags: ['ideas', 'innovation', 'brainstorming']
   },
   {
@@ -236,49 +274,63 @@ const templates: NoteTemplate[] = [
     name: 'Study Session',
     description: 'Template for structured study sessions and review',
     icon: <Zap className="h-5 w-5" />,
-    content: `# Study Session - [Subject/Topic]
+    content: `<h1>Study Session - [Subject/Topic]</h1>
 
-**Date:** [Date]
-**Duration:** [Time spent]
-**Materials:** [Textbooks, notes, resources used]
+<p><strong>Date:</strong> [Date]<br>
+<strong>Duration:</strong> [Time spent]<br>
+<strong>Materials:</strong> [Textbooks, notes, resources used]</p>
 
-## Study Goals
-- [Goal 1]
-- [Goal 2]
-- [Goal 3]
+<h2>Study Goals</h2>
+<ul>
+<li>[Goal 1]</li>
+<li>[Goal 2]</li>
+<li>[Goal 3]</li>
+</ul>
 
-## Topics Covered
-### [Topic 1]
-- Key points: [Main points]
-- Understanding level: [1-5 scale]
-- Questions: [Questions I have]
+<h2>Topics Covered</h2>
+<h3>[Topic 1]</h3>
+<ul>
+<li>Key points: [Main points]</li>
+<li>Understanding level: [1-5 scale]</li>
+<li>Questions: [Questions I have]</li>
+</ul>
 
-### [Topic 2]
-- Key points: [Main points]
-- Understanding level: [1-5 scale]
-- Questions: [Questions I have]
+<h3>[Topic 2]</h3>
+<ul>
+<li>Key points: [Main points]</li>
+<li>Understanding level: [1-5 scale]</li>
+<li>Questions: [Questions I have]</li>
+</ul>
 
-## Practice Problems
-- [Problem 1]: [Solution approach]
-- [Problem 2]: [Solution approach]
+<h2>Practice Problems</h2>
+<ul>
+<li>[Problem 1]: [Solution approach]</li>
+<li>[Problem 2]: [Solution approach]</li>
+</ul>
 
-## Difficult Concepts
-- [Concept 1]: [Why it's difficult] - [How to improve understanding]
-- [Concept 2]: [Why it's difficult] - [How to improve understanding]
+<h2>Difficult Concepts</h2>
+<ul>
+<li>[Concept 1]: [Why it's difficult] - [How to improve understanding]</li>
+<li>[Concept 2]: [Why it's difficult] - [How to improve understanding]</li>
+</ul>
 
-## Review Questions
-- [Question 1]
-- [Question 2]
-- [Question 3]
+<h2>Review Questions</h2>
+<ul>
+<li>[Question 1]</li>
+<li>[Question 2]</li>
+<li>[Question 3]</li>
+</ul>
 
-## Next Study Session
-- [What to focus on next]
-- [Materials to review]
-- [Practice problems to work on]
+<h2>Next Study Session</h2>
+<ul>
+<li>[What to focus on next]</li>
+<li>[Materials to review]</li>
+<li>[Practice problems to work on]</li>
+</ul>
 
-## Confidence Level
-**Overall:** [1-5 scale]
-**Areas needing work:** [List areas]`,
+<h2>Confidence Level</h2>
+<p><strong>Overall:</strong> [1-5 scale]<br>
+<strong>Areas needing work:</strong> [List areas]</p>`,
     tags: ['study', 'academic', 'learning']
   }
 ]
