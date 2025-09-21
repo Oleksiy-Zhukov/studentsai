@@ -39,6 +39,23 @@ export function EditableNoteView({
   const isExistingNote = !!note
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>()
 
+  // Reset state when note changes
+  useEffect(() => {
+    if (note) {
+      setTitle(note.title || '')
+      setContent(note.content || '')
+      setHasUnsavedChanges(false)
+      setLastSaved(null)
+      setError('')
+    } else {
+      setTitle('')
+      setContent('')
+      setHasUnsavedChanges(false)
+      setLastSaved(null)
+      setError('')
+    }
+  }, [note?.id]) // Only reset when note ID changes
+
   // Track changes
   useEffect(() => {
     if (isExistingNote) {

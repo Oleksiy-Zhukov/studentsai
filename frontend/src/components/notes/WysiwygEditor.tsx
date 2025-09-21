@@ -55,6 +55,8 @@ export function WysiwygEditor({
       StarterKit.configure({
         // Disable code blocks for now as they might interfere with markdown
         codeBlock: false,
+        // Disable link since we're adding it separately
+        link: false,
       }),
       Placeholder.configure({
         placeholder,
@@ -253,7 +255,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('bold') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('bold') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Bold (Cmd/Ctrl + B)"
           >
             <Bold className="h-4 w-4" />
@@ -262,7 +264,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('italic') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('italic') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Italic (Cmd/Ctrl + I)"
           >
             <Italic className="h-4 w-4" />
@@ -271,7 +273,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('strike') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('strike') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Strikethrough"
           >
             <Strikethrough className="h-4 w-4" />
@@ -280,7 +282,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('code') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('code') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Code (Cmd/Ctrl + E)"
           >
             <Code className="h-4 w-4" />
@@ -293,7 +295,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('heading', { level: 1 }) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('heading', { level: 1 }) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Heading 1 (Cmd/Ctrl + 1)"
           >
             <Heading1 className="h-4 w-4" />
@@ -302,7 +304,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('heading', { level: 2 }) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('heading', { level: 2 }) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Heading 2 (Cmd/Ctrl + 2)"
           >
             <Heading2 className="h-4 w-4" />
@@ -311,7 +313,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('heading', { level: 3 }) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('heading', { level: 3 }) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Heading 3 (Cmd/Ctrl + 3)"
           >
             <Heading3 className="h-4 w-4" />
@@ -324,7 +326,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('bulletList') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('bulletList') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Bullet List (Cmd/Ctrl + Shift + 8)"
           >
             <List className="h-4 w-4" />
@@ -333,7 +335,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('orderedList') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('orderedList') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Numbered List (Cmd/Ctrl + Shift + 7)"
           >
             <ListOrdered className="h-4 w-4" />
@@ -346,7 +348,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={`h-8 w-8 p-0 ${editor.isActive('blockquote') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('blockquote') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Quote (Cmd/Ctrl + Shift + >)"
           >
             <Quote className="h-4 w-4" />
@@ -368,7 +370,7 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => setShowLinkDialog(true)}
-            className={`h-8 w-8 p-0 ${editor.isActive('link') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
+            className={`h-8 w-8 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${editor.isActive('link') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}`}
             title="Add Link (Cmd/Ctrl + K)"
           >
             <LinkIcon className="h-4 w-4" />
