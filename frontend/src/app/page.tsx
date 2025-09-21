@@ -6,10 +6,12 @@ import { EditableNoteView } from '@/components/notes/EditableNoteView'
 import { NotesList } from '@/components/notes/NotesList'
 import { FlashcardViewer } from '@/components/flashcards/FlashcardViewer'
 import { NotesGraph } from '@/components/graph/NotesGraph'
+import { NoteTemplates } from '@/components/notes/NoteTemplates'
+import { KeyboardShortcuts } from '@/components/notes/KeyboardShortcuts'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type Note, type User, APIError } from '@/lib/api'
-import { Plus, FileText, Network, Search, FolderOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Plus, FileText, Network, Search, FolderOpen, PanelLeftClose, PanelLeftOpen, LayoutTemplate, HelpCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 type View = 'notes' | 'flashcards' | 'graph'
@@ -22,6 +24,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotesPanel, setShowNotesPanel] = useState(true)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
 
   useEffect(() => {
     // Check for existing auth
@@ -45,6 +49,39 @@ export default function Home() {
       }
     }
     setLoading(false)
+  }, [])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K for search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        // Focus search input
+        const searchInput = document.querySelector('input[placeholder="Search notes..."]') as HTMLInputElement
+        if (searchInput) {
+          searchInput.focus()
+        }
+      }
+      // Cmd/Ctrl + N for new note
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault()
+        handleCreateNote()
+      }
+      // Cmd/Ctrl + T for templates
+      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+        e.preventDefault()
+        setShowTemplates(true)
+      }
+      // ? for keyboard shortcuts help
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        setShowKeyboardShortcuts(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const loadNotes = async () => {
@@ -75,6 +112,22 @@ export default function Home() {
 
   const handleCreateNote = () => {
     setSelectedNote(null)
+  }
+
+  const handleSelectTemplate = (template: any) => {
+    setShowTemplates(false)
+    // Create a new note with template content
+    const newNote = {
+      id: '',
+      title: template.name,
+      content: template.content,
+      summary: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      tags: template.tags,
+      user_id: user?.id || ''
+    }
+    setSelectedNote(newNote as Note)
   }
 
   const handleSelectNote = (note: Note) => {
@@ -150,7 +203,18 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f1115]">
       {/* Top Header */}
-      <Header user={user} onLogout={handleLogout} context="notes" />
+      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-[#232a36] bg-white dark:bg-[#141820]">
+        <Header user={user} onLogout={handleLogout} context="notes" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowKeyboardShortcuts(true)}
+          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          title="Keyboard shortcuts (?)"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+      </div>
       
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -176,13 +240,25 @@ export default function Home() {
                 <FolderOpen className="h-4 w-4 text-gray-600 dark:text-gray-300" />
                 <span className="font-medium text-gray-900 dark:text-gray-100">Notes</span>
               </div>
-              <Button
-                size="sm"
-                onClick={handleCreateNote}
-                className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-white"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => setShowTemplates(true)}
+                  variant="outline"
+                  className="h-8 px-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+                  title="Use template"
+                >
+                  <LayoutTemplate className="h-4 w-4 mr-1" />
+                  Template
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleCreateNote}
+                  className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-white"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Notes List */}
@@ -302,6 +378,22 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Templates Modal */}
+      {showTemplates && (
+        <NoteTemplates
+          onSelectTemplate={handleSelectTemplate}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcuts
+          isOpen={showKeyboardShortcuts}
+          onClose={() => setShowKeyboardShortcuts(false)}
+        />
+      )}
     </div>
   )
 }

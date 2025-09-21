@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api, type Note } from '@/lib/api'
-import { Save, FileText, PanelLeftClose, PanelLeftOpen, Loader2, Plus } from 'lucide-react'
+import { Save, FileText, PanelLeftClose, PanelLeftOpen, Loader2, Plus, Focus } from 'lucide-react'
 import { WysiwygEditor } from './WysiwygEditor'
+import { DistractionFreeMode } from './DistractionFreeMode'
 
 interface EditableNoteViewProps {
   note?: Note
@@ -33,6 +34,7 @@ export function EditableNoteView({
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [showDistractionFree, setShowDistractionFree] = useState(false)
 
   const isExistingNote = !!note
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>()
@@ -146,6 +148,22 @@ export function EditableNoteView({
     }
   }, [isExistingNote])
 
+  // Show distraction-free mode
+  if (showDistractionFree) {
+    return (
+      <DistractionFreeMode
+        note={isExistingNote ? note : undefined}
+        onSave={(savedNote) => {
+          onSave(savedNote)
+          setTitle(savedNote.title)
+          setContent(savedNote.content)
+        }}
+        onExit={() => setShowDistractionFree(false)}
+        onNavigateByTitle={onNavigateByTitle}
+      />
+    )
+  }
+
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#141820]">
       {/* Header */}
@@ -159,24 +177,40 @@ export function EditableNoteView({
             
             {/* Auto-save status indicator */}
             {isExistingNote && (
-              <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center space-x-2 text-xs">
                 {autoSaving ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin text-orange-500" />
+                  <div className="flex items-center space-x-1 text-orange-600 dark:text-orange-400">
+                    <Loader2 className="h-3 w-3 animate-spin" />
                     <span>Saving...</span>
-                  </>
+                  </div>
                 ) : hasUnsavedChanges ? (
-                  <span className="text-orange-600 dark:text-orange-400">Unsaved changes</span>
+                  <div className="flex items-center space-x-1 text-orange-600 dark:text-orange-400">
+                    <div className="h-2 w-2 bg-orange-500 rounded-full"></div>
+                    <span>Unsaved changes</span>
+                  </div>
                 ) : lastSaved ? (
-                  <span className="text-green-600 dark:text-green-400">
-                    Saved {lastSaved.toLocaleTimeString()}
-                  </span>
+                  <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Saved {lastSaved.toLocaleTimeString()}</span>
+                  </div>
                 ) : null}
               </div>
             )}
           </div>
           
           <div className="flex items-center space-x-2">
+            {/* Distraction-Free Mode Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDistractionFree(true)}
+              className="h-8 px-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+              title="Enter distraction-free mode (Cmd/Ctrl + Enter)"
+            >
+              <Focus className="h-4 w-4 mr-1" />
+              Focus
+            </Button>
+
             {/* Panel Toggle Button */}
             {onToggleNotesPanel && (
               <Button
