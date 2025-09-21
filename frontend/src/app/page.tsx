@@ -119,8 +119,11 @@ export default function Home() {
     try {
       // Create a new note with template content via API
       const newNote = await api.createNote(template.name, template.content)
+      console.log('Created note from template:', newNote)
       setSelectedNote(newNote)
-      // Refresh the notes list to include the new note
+      // Add the new note to the local state immediately
+      setNotes(prevNotes => [newNote, ...prevNotes])
+      // Also refresh the notes list to ensure consistency
       loadNotes()
     } catch (error) {
       console.error('Failed to create note from template:', error)

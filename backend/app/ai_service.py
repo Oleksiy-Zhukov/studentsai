@@ -220,7 +220,7 @@ class AIService:
             return np.eye(n)
 
     def find_note_connections(
-        self, notes: List[Dict[str, Any]], threshold: float = 0.3
+        self, notes: List[Dict[str, Any]], threshold: float = 0.6
     ) -> List[Dict[str, Any]]:
         """Find connections between notes based on content similarity"""
         if len(notes) < 2:
