@@ -114,20 +114,33 @@ export default function Home() {
     setSelectedNote(null)
   }
 
-  const handleSelectTemplate = (template: any) => {
+  const handleSelectTemplate = async (template: any) => {
     setShowTemplates(false)
-    // Create a new note with template content
-    const newNote = {
-      id: '',
-      title: template.name,
-      content: template.content,
-      summary: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      tags: template.tags,
-      user_id: user?.id || ''
+    try {
+      // Create a new note with template content via API
+      const newNote = await api.createNote({
+        title: template.name,
+        content: template.content,
+        tags: template.tags
+      })
+      setSelectedNote(newNote)
+      // Refresh the notes list to include the new note
+      loadNotes()
+    } catch (error) {
+      console.error('Failed to create note from template:', error)
+      // Fallback: create local note object
+      const newNote = {
+        id: '',
+        title: template.name,
+        content: template.content,
+        summary: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tags: template.tags,
+        user_id: user?.id || ''
+      }
+      setSelectedNote(newNote as Note)
     }
-    setSelectedNote(newNote as Note)
   }
 
   const handleSelectNote = (note: Note) => {
@@ -203,17 +216,19 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f1115]">
       {/* Top Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-[#232a36] bg-white dark:bg-[#141820]">
-        <Header user={user} onLogout={handleLogout} context="notes" />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowKeyboardShortcuts(true)}
-          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          title="Keyboard shortcuts (?)"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
+      <div className="px-6 py-3 border-b border-gray-200 dark:border-[#232a36] bg-white dark:bg-[#141820]">
+        <div className="flex items-center justify-between">
+          <Header user={user} onLogout={handleLogout} context="notes" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowKeyboardShortcuts(true)}
+            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            title="Keyboard shortcuts (?)"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       {/* Main Content */}
@@ -328,31 +343,14 @@ export default function Home() {
           {/* Content Area */}
           <div className="flex-1 overflow-hidden min-h-0">
             {currentView === 'notes' ? (
-              selectedNote ? (
-                <EditableNoteView
-                  note={selectedNote}
-                  onSave={handleSaveNote}
-                  onNavigateByTitle={navigateToTitle}
-                  showNotesPanel={showNotesPanel}
-                  onToggleNotesPanel={() => setShowNotesPanel(!showNotesPanel)}
-                  onCreateNew={handleCreateNote}
-                />
-              ) : (
-                <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#0f1115]">
-                  <div className="text-center">
-                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No note selected</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">Select a note from the sidebar or create a new one</p>
-                    <Button
-                      onClick={handleCreateNote}
-                      className="bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-500 dark:hover:bg-orange-400"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create New Note
-                    </Button>
-                  </div>
-                </div>
-              )
+              <EditableNoteView
+                note={selectedNote}
+                onSave={handleSaveNote}
+                onNavigateByTitle={navigateToTitle}
+                showNotesPanel={showNotesPanel}
+                onToggleNotesPanel={() => setShowNotesPanel(!showNotesPanel)}
+                onCreateNew={handleCreateNote}
+              />
             ) : currentView === 'flashcards' ? (
               selectedNote ? (
                 <FlashcardViewer

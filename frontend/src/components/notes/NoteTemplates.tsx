@@ -36,27 +36,33 @@ const templates: NoteTemplate[] = [
     name: 'Meeting Notes',
     description: 'Structure for capturing meeting discussions and action items',
     icon: <Users className="h-5 w-5" />,
-    content: `# Meeting Notes
+    content: `<h1>Meeting Notes</h1>
 
-**Date:** [Date]
-**Attendees:** [List attendees]
-**Agenda:** [Meeting agenda]
+<p><strong>Date:</strong> [Date]<br>
+<strong>Attendees:</strong> [List attendees]<br>
+<strong>Agenda:</strong> [Meeting agenda]</p>
 
-## Discussion Points
-- [Key point 1]
-- [Key point 2]
-- [Key point 3]
+<h2>Discussion Points</h2>
+<ul>
+<li>[Key point 1]</li>
+<li>[Key point 2]</li>
+<li>[Key point 3]</li>
+</ul>
 
-## Action Items
-- [ ] [Action item 1] - [Assignee] - [Due date]
-- [ ] [Action item 2] - [Assignee] - [Due date]
+<h2>Action Items</h2>
+<ul>
+<li>[ ] [Action item 1] - [Assignee] - [Due date]</li>
+<li>[ ] [Action item 2] - [Assignee] - [Due date]</li>
+</ul>
 
-## Next Steps
-- [Next step 1]
-- [Next step 2]
+<h2>Next Steps</h2>
+<ul>
+<li>[Next step 1]</li>
+<li>[Next step 2]</li>
+</ul>
 
-## Notes
-[Additional notes and observations]`,
+<h2>Notes</h2>
+<p>[Additional notes and observations]</p>`,
     tags: ['meeting', 'work', 'collaboration']
   },
   {
