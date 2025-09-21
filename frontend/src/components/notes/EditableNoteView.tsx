@@ -56,10 +56,21 @@ export function EditableNoteView({
     }
   }, [note?.id]) // Only reset when note ID changes
 
+  // Clear auto-save timeout when note changes
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+  }, [note?.id])
+
   // Track changes
   useEffect(() => {
     if (isExistingNote) {
       const hasChanges = title !== note.title || content !== note.content
+      setHasUnsavedChanges(hasChanges)
+    } else {
+      // For new notes, any content means unsaved changes
+      const hasChanges = title.trim() !== '' || content.trim() !== ''
       setHasUnsavedChanges(hasChanges)
     }
   }, [title, content, note, isExistingNote])
@@ -82,16 +93,39 @@ export function EditableNoteView({
     }
   }
 
+  // Auto-save functionality for new notes (create them)
+  const performAutoSaveNew = async () => {
+    if (isExistingNote || !hasUnsavedChanges) return
+    if (!title.trim() || !content.trim()) return
+
+    setAutoSaving(true)
+    try {
+      const savedNote = await api.createNote(title, content)
+      setLastSaved(new Date())
+      setHasUnsavedChanges(false)
+      // Update the note reference to mark it as existing
+      onSave(savedNote)
+    } catch (err) {
+      console.error('Auto-save failed:', err)
+    } finally {
+      setAutoSaving(false)
+    }
+  }
+
   // Debounced auto-save
   useEffect(() => {
-    if (!isExistingNote || !hasUnsavedChanges) return
+    if (!hasUnsavedChanges) return
 
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
     }
 
     autoSaveTimeoutRef.current = setTimeout(() => {
-      performAutoSave()
+      if (isExistingNote) {
+        performAutoSave()
+      } else {
+        performAutoSaveNew()
+      }
     }, 3000)
 
     return () => {

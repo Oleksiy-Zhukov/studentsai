@@ -118,11 +118,7 @@ export default function Home() {
     setShowTemplates(false)
     try {
       // Create a new note with template content via API
-      const newNote = await api.createNote({
-        title: template.name,
-        content: template.content,
-        tags: template.tags
-      })
+      const newNote = await api.createNote(template.name, template.content)
       setSelectedNote(newNote)
       // Refresh the notes list to include the new note
       loadNotes()
@@ -217,18 +213,7 @@ export default function Home() {
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f1115]">
       {/* Top Header */}
       <div className="px-6 py-3 border-b border-gray-200 dark:border-[#232a36] bg-white dark:bg-[#141820]">
-        <div className="flex items-center justify-between">
-          <Header user={user} onLogout={handleLogout} context="notes" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowKeyboardShortcuts(true)}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            title="Keyboard shortcuts (?)"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-        </div>
+        <Header user={user} onLogout={handleLogout} context="notes" />
       </div>
       
       {/* Main Content */}
@@ -324,8 +309,8 @@ export default function Home() {
                 </Tabs>
               </div>
 
-              {selectedNote && currentView === 'notes' && (
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
+                {selectedNote && currentView === 'notes' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -335,8 +320,17 @@ export default function Home() {
                     <img src="/icons/flashcards-icon.svg" alt="Flashcards" className="h-4 w-4" />
                     <span>Generate Flashcards</span>
                   </Button>
-                </div>
-              )}
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowKeyboardShortcuts(true)}
+                  className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  title="Keyboard shortcuts (?)"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
