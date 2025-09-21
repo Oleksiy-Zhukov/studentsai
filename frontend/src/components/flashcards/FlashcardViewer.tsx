@@ -22,14 +22,14 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NotesGraph } from '@/components/graph/NotesGraph'
 
 interface FlashcardViewerProps {
-  actualNoteId?: string
+  noteId?: string
   note?: any
   onFlashcardCreated?: (flashcard: Flashcard) => void
 }
 
-export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: FlashcardViewerProps) {
-  // Use actualNoteId from props or extract from note object
-  const actualNoteId = actualNoteId || note?.id
+export function FlashcardViewer({ noteId, note, onFlashcardCreated }: FlashcardViewerProps) {
+  // Use noteId from props or extract from note object
+  const actualNoteId = noteId || note?.id
   const [flashcards, setFlashcards] = useState<Flashcard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
