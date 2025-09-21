@@ -22,14 +22,14 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NotesGraph } from '@/components/graph/NotesGraph'
 
 interface FlashcardViewerProps {
-  actualNoteId?: string
+  noteId?: string
   note?: any
   onFlashcardCreated?: (flashcard: Flashcard) => void
 }
 
-export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: FlashcardViewerProps) {
-  // Use actualNoteId from props or extract from note object
-  const actualNoteId = actualNoteId || note?.id
+export function FlashcardViewer({ noteId, note, onFlashcardCreated }: FlashcardViewerProps) {
+  // Use noteId from props or extract from note object
+  const noteId = noteId || note?.id
   const [flashcards, setFlashcards] = useState<Flashcard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
@@ -44,11 +44,11 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
   const removeEmojis = (text: string) => text.replace(/[\u{1F300}-\u{1FAFF}\u{1F600}-\u{1F64F}\u{2700}-\u{27BF}\u{2600}-\u{26FF}\u{FE0F}]/gu, '')
 
   const loadFlashcards = useCallback(async () => {
-    if (!actualNoteId) return
+    if (!noteId) return
     
     try {
       setLoading(true)
-      const response = await api.getNoteFlashcards(actualNoteId)
+      const response = await api.getNoteFlashcards(noteId)
       setFlashcards(response)
       setCurrentIndex(0)
       setShowAnswer(false)
@@ -59,11 +59,11 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
     } finally {
       setLoading(false)
     }
-  }, [actualNoteId])
+  }, [noteId])
 
   useEffect(() => {
     loadFlashcards()
-  }, [actualNoteId, loadFlashcards])
+  }, [noteId, loadFlashcards])
 
   const specificList = flashcards.filter(fc => fc.flashcard_type !== 'contextual')
   const contextualList = flashcards.filter(fc => fc.flashcard_type === 'contextual')
@@ -169,7 +169,7 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
             <Button 
               onClick={async () => {
                 try {
-                  const generatedFlashcards = await api.generateNoteFlashcards(actualNoteId, 5)
+                  const generatedFlashcards = await api.generateNoteFlashcards(noteId, 5)
                   setFlashcards(generatedFlashcards)
                   setCurrentIndex(0)
                   setShowAnswer(false)
@@ -188,7 +188,7 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
               variant="outline"
               onClick={async () => {
                 try {
-                  const generated = await api.generateContextualFlashcards(actualNoteId, 10)
+                  const generated = await api.generateContextualFlashcards(noteId, 10)
                   setFlashcards(generated)
                   setCurrentIndex(0)
                   setShowAnswer(false)
@@ -231,7 +231,7 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
               <Button 
                 onClick={async () => {
                   try {
-                    const generated = await api.generateContextualFlashcards(actualNoteId, 10)
+                    const generated = await api.generateContextualFlashcards(noteId, 10)
                     setFlashcards(generated)
                     setCurrentIndex(0)
                     setShowAnswer(false)
@@ -250,7 +250,7 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
               <Button 
                 onClick={async () => {
                   try {
-                    const generatedFlashcards = await api.generateNoteFlashcards(actualNoteId, 5)
+                    const generatedFlashcards = await api.generateNoteFlashcards(noteId, 5)
                     setFlashcards(generatedFlashcards)
                     setCurrentIndex(0)
                     setShowAnswer(false)
@@ -575,7 +575,7 @@ export function FlashcardViewer({ actualNoteId, note, onFlashcardCreated }: Flas
 
       {/* Mini Graph Context (simple, non-distracting) */}
       <div className="rounded-lg border border-gray-200 dark:border-[#232a36] bg-white dark:bg-[#141820] p-2">
-        <NotesGraph onNodeClick={() => {}} highlightNodeIds={[actualNoteId]} mode="mini" anchorNodeId={actualNoteId} />
+        <NotesGraph onNodeClick={() => {}} highlightNodeIds={[noteId]} mode="mini" anchorNodeId={noteId} />
       </div>
     </div>
   )
