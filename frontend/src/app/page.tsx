@@ -249,13 +249,6 @@ export default function Home() {
                   <LayoutTemplate className="h-4 w-4 mr-1" />
                   Template
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleCreateNote}
-                  className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
             </div>
 
