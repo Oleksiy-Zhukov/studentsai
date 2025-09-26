@@ -136,6 +136,7 @@ from .schemas import (
 from .auth import (
     authenticate_user,
     register_user,
+    get_current_user,
     get_current_user_id,
     get_verified_user_id,
     create_access_token,
@@ -438,9 +439,14 @@ async def login(user_data: UserLogin, request: Request, db: Session = Depends(ge
 
 @app.post("/auth/refresh", response_model=Token)
 async def refresh_token(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    request: Request,
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
 ):
     """Refresh access token"""
+    # Rate limit refresh attempts (5 requests per 5 minutes)
+    await check_auth_rate_limit(request)
+    
     # Create a new access token for the current user
     access_token = create_access_token(data={"sub": current_user.email})
 

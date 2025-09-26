@@ -214,7 +214,10 @@ class APIClient {
       }
       return false
     } catch (error) {
-      console.error('Token refresh failed:', error)
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Token refresh failed:', error)
+      }
       this.clearToken()
       return false
     }
@@ -243,16 +246,13 @@ class APIClient {
 
     // Handle 401 errors with automatic token refresh
     if (!response.ok && response.status === 401 && !isRetry && this.token) {
-      console.log('Token expired, attempting refresh...')
       const refreshSuccess = await this.refreshToken()
       
       if (refreshSuccess) {
         // Retry the original request with the new token
-        console.log('Token refreshed, retrying request...')
         return this.request<T>(endpoint, options, true)
       } else {
         // Refresh failed, redirect to login
-        console.log('Token refresh failed, redirecting to login...')
         if (typeof window !== 'undefined') {
           window.location.replace('/landing')
         }
