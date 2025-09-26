@@ -438,13 +438,12 @@ async def login(user_data: UserLogin, request: Request, db: Session = Depends(ge
 
 @app.post("/auth/refresh", response_model=Token)
 async def refresh_token(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Refresh access token"""
     # Create a new access token for the current user
     access_token = create_access_token(data={"sub": current_user.email})
-    
+
     return Token(
         access_token=access_token,
         user={
