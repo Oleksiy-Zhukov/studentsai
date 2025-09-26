@@ -136,6 +136,7 @@ from .schemas import (
 from .auth import (
     authenticate_user,
     register_user,
+    get_current_user,
     get_current_user_id,
     get_verified_user_id,
     create_access_token,
