@@ -202,9 +202,28 @@ class APIClient {
     }
   }
 
+  async refreshToken(): Promise<boolean> {
+    try {
+      const response = await this.request<{ access_token: string; user: User }>('/auth/refresh', {
+        method: 'POST',
+      })
+      
+      if (response.access_token) {
+        this.setToken(response.access_token)
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Token refresh failed:', error)
+      this.clearToken()
+      return false
+    }
+  }
+
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry: boolean = false
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     
@@ -221,6 +240,25 @@ class APIClient {
       ...options,
       headers,
     })
+
+    // Handle 401 errors with automatic token refresh
+    if (!response.ok && response.status === 401 && !isRetry && this.token) {
+      console.log('Token expired, attempting refresh...')
+      const refreshSuccess = await this.refreshToken()
+      
+      if (refreshSuccess) {
+        // Retry the original request with the new token
+        console.log('Token refreshed, retrying request...')
+        return this.request<T>(endpoint, options, true)
+      } else {
+        // Refresh failed, redirect to login
+        console.log('Token refresh failed, redirecting to login...')
+        if (typeof window !== 'undefined') {
+          window.location.replace('/landing')
+        }
+        throw new APIError(401, 'Authentication failed')
+      }
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))

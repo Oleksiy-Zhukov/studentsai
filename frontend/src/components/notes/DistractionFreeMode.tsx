@@ -44,15 +44,76 @@ export function DistractionFreeMode({
     return false
   })
   const [showSettings, setShowSettings] = useState(false)
-  const [fontSize, setFontSize] = useState(16)
-  const [lineHeight, setLineHeight] = useState(1.6)
-  const [maxWidth, setMaxWidth] = useState(800)
-  const [showWordCount, setShowWordCount] = useState(true)
-  const [autoSave, setAutoSave] = useState(true)
+  const [fontSize, setFontSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_fontSize')
+      return saved ? parseInt(saved) : 16
+    }
+    return 16
+  })
+  const [lineHeight, setLineHeight] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_lineHeight')
+      return saved ? parseFloat(saved) : 1.6
+    }
+    return 1.6
+  })
+  const [maxWidth, setMaxWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_maxWidth')
+      return saved ? parseInt(saved) : 800
+    }
+    return 800
+  })
+  const [showWordCount, setShowWordCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_showWordCount')
+      return saved ? saved === 'true' : true
+    }
+    return true
+  })
+  const [autoSave, setAutoSave] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_autoSave')
+      return saved ? saved === 'true' : true
+    }
+    return true
+  })
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const isExistingNote = !!note
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_fontSize', fontSize.toString())
+    }
+  }, [fontSize])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_lineHeight', lineHeight.toString())
+    }
+  }, [lineHeight])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_maxWidth', maxWidth.toString())
+    }
+  }, [maxWidth])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_showWordCount', showWordCount.toString())
+    }
+  }, [showWordCount])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_autoSave', autoSave.toString())
+    }
+  }, [autoSave])
 
   // Auto-save functionality
   useEffect(() => {
@@ -159,9 +220,9 @@ export function DistractionFreeMode({
 
   return (
     <div className={`fixed inset-0 z-50 ${isDarkMode ? 'dark' : ''}`}>
-      <div className={`h-full w-full ${isDarkMode ? 'bg-gray-900' : 'bg-white'} transition-colors`}>
+      <div className={`h-full w-full ${isDarkMode ? 'bg-[#0f1115]' : 'bg-gray-50'} transition-colors`}>
         {/* Top Bar */}
-        <div className={`h-12 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'} flex items-center justify-between px-4`}>
+        <div className={`h-12 border-b ${isDarkMode ? 'border-[#232a36] bg-[#0f1115]' : 'border-gray-200 bg-gray-50'} flex items-center justify-between px-4`}>
           <div className="flex items-center space-x-3">
             <Focus className="h-5 w-5 text-orange-500" />
             <span className="font-medium text-gray-900 dark:text-gray-100">Distraction-Free Mode</span>
@@ -238,7 +299,14 @@ export function DistractionFreeMode({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onExit}
+              onClick={() => {
+                handleSave().then(() => {
+                  onExit()
+                }).catch(() => {
+                  // Even if save fails, exit to prevent data loss
+                  onExit()
+                })
+              }}
               className="h-8 w-8 p-0"
             >
               <X className="h-4 w-4" />
@@ -248,7 +316,7 @@ export function DistractionFreeMode({
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className={`absolute top-12 right-4 z-10 w-64 p-4 rounded-lg shadow-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`absolute top-12 right-4 z-10 w-64 p-4 rounded-lg shadow-lg border ${isDarkMode ? 'bg-[#0f1115] border-[#232a36]' : 'bg-white border-gray-200'}`}>
             <div className="space-y-4">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">Writing Settings</h3>
               
@@ -332,8 +400,8 @@ export function DistractionFreeMode({
               placeholder="Note title..."
               className={`text-3xl font-semibold border-0 border-b rounded-none px-0 py-3 focus:ring-0 ${
                 isDarkMode 
-                  ? 'bg-gray-900 text-gray-100 border-gray-700 focus:border-gray-500' 
-                  : 'bg-white text-gray-900 border-gray-200 focus:border-gray-400'
+                  ? 'bg-[#0f1115] text-gray-100 border-[#232a36] focus:border-gray-500' 
+                  : 'bg-gray-50 text-gray-900 border-gray-200 focus:border-gray-400'
               }`}
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',

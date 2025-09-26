@@ -436,6 +436,29 @@ async def login(user_data: UserLogin, request: Request, db: Session = Depends(ge
     )
 
 
+@app.post("/auth/refresh", response_model=Token)
+async def refresh_token(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Refresh access token"""
+    # Create a new access token for the current user
+    access_token = create_access_token(data={"sub": current_user.email})
+
+    return Token(
+        access_token=access_token,
+        user={
+            "id": current_user.id,
+            "email": current_user.email,
+            "username": current_user.username,
+            "verified": current_user.verified,
+            "has_password": bool(current_user.password_hash),
+            "plan": current_user.plan,
+            "created_at": current_user.created_at,
+            "updated_at": current_user.updated_at,
+        },
+    )
+
+
 @app.get("/auth/google/login")
 async def google_oauth_login():
     """Initiate Google OAuth login - redirects to Google consent screen"""
