@@ -73,11 +73,6 @@ export default function Home() {
         e.preventDefault()
         setShowTemplates(true)
       }
-      // ? for keyboard shortcuts help
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        setShowKeyboardShortcuts(true)
-      }
     }
 
     document.addEventListener('keydown', handleKeyDown)
