@@ -308,17 +308,6 @@ export default function Home() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {selectedNote && currentView === 'notes' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewFlashcards(selectedNote)}
-                    className="flex items-center space-x-1 border-gray-200 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:bg-[#0f1318] dark:hover:bg-[#1d2430]"
-                  >
-                    <img src="/icons/flashcards-icon.svg" alt="Flashcards" className="h-4 w-4" />
-                    <span>Generate Flashcards</span>
-                  </Button>
-                )}
                 <Button
                   variant="ghost"
                   size="sm"
