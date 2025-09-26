@@ -35,7 +35,14 @@ export function DistractionFreeMode({
   const [title, setTitle] = useState(note?.title || '')
   const [content, setContent] = useState(note?.content || '')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Detect current theme from document
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark') || 
+             window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return false
+  })
   const [showSettings, setShowSettings] = useState(false)
   const [fontSize, setFontSize] = useState(16)
   const [lineHeight, setLineHeight] = useState(1.6)
@@ -112,9 +119,15 @@ export function DistractionFreeMode({
         e.preventDefault()
         handleSave()
       }
-      // Escape to exit
+      // Escape to exit (save first)
       if (e.key === 'Escape') {
-        onExit()
+        e.preventDefault()
+        handleSave().then(() => {
+          onExit()
+        }).catch(() => {
+          // Even if save fails, exit to prevent data loss
+          onExit()
+        })
       }
       // Cmd/Ctrl + Enter to toggle fullscreen
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {

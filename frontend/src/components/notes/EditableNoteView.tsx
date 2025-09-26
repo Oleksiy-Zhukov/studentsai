@@ -33,6 +33,7 @@ export function EditableNoteView({
   const [autoSaving, setAutoSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showSaveTime, setShowSaveTime] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [showDistractionFree, setShowDistractionFree] = useState(false)
 
@@ -86,6 +87,9 @@ export function EditableNoteView({
       setLastSaved(new Date())
       setHasUnsavedChanges(false)
       onSave(savedNote)
+      // Show save time for 3 seconds
+      setShowSaveTime(true)
+      setTimeout(() => setShowSaveTime(false), 3000)
     } catch (err) {
       console.error('Auto-save failed:', err)
     } finally {
@@ -105,6 +109,9 @@ export function EditableNoteView({
       setHasUnsavedChanges(false)
       // Update the note reference to mark it as existing
       onSave(savedNote)
+      // Show save time for 3 seconds
+      setShowSaveTime(true)
+      setTimeout(() => setShowSaveTime(false), 3000)
     } catch (err) {
       console.error('Auto-save failed:', err)
     } finally {
@@ -154,6 +161,9 @@ export function EditableNoteView({
       setLastSaved(new Date())
       setHasUnsavedChanges(false)
       onSave(savedNote)
+      // Show save time for 3 seconds
+      setShowSaveTime(true)
+      setTimeout(() => setShowSaveTime(false), 3000)
     } catch (err) {
       setError('Failed to save note')
     } finally {
@@ -242,7 +252,7 @@ export function EditableNoteView({
                 ) : lastSaved ? (
                   <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
                     <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                    <span>Saved {lastSaved.toLocaleTimeString()}</span>
+                    <span>{showSaveTime ? `Saved ${lastSaved.toLocaleTimeString()}` : 'Saved'}</span>
                   </div>
                 ) : null}
               </div>
@@ -299,7 +309,7 @@ export function EditableNoteView({
       )}
 
       {/* Content */}
-      <div className="flex-1 flex flex-col overflow-hidden p-6">
+      <div className="flex-1 flex flex-col overflow-y-auto p-6">
         {/* Title Input */}
         <div className="mb-6">
           <Input
