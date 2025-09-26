@@ -44,15 +44,76 @@ export function DistractionFreeMode({
     return false
   })
   const [showSettings, setShowSettings] = useState(false)
-  const [fontSize, setFontSize] = useState(16)
-  const [lineHeight, setLineHeight] = useState(1.6)
-  const [maxWidth, setMaxWidth] = useState(800)
-  const [showWordCount, setShowWordCount] = useState(true)
-  const [autoSave, setAutoSave] = useState(true)
+  const [fontSize, setFontSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_fontSize')
+      return saved ? parseInt(saved) : 16
+    }
+    return 16
+  })
+  const [lineHeight, setLineHeight] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_lineHeight')
+      return saved ? parseFloat(saved) : 1.6
+    }
+    return 1.6
+  })
+  const [maxWidth, setMaxWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_maxWidth')
+      return saved ? parseInt(saved) : 800
+    }
+    return 800
+  })
+  const [showWordCount, setShowWordCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_showWordCount')
+      return saved ? saved === 'true' : true
+    }
+    return true
+  })
+  const [autoSave, setAutoSave] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusedMode_autoSave')
+      return saved ? saved === 'true' : true
+    }
+    return true
+  })
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const isExistingNote = !!note
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_fontSize', fontSize.toString())
+    }
+  }, [fontSize])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_lineHeight', lineHeight.toString())
+    }
+  }, [lineHeight])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_maxWidth', maxWidth.toString())
+    }
+  }, [maxWidth])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_showWordCount', showWordCount.toString())
+    }
+  }, [showWordCount])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusedMode_autoSave', autoSave.toString())
+    }
+  }, [autoSave])
 
   // Auto-save functionality
   useEffect(() => {
