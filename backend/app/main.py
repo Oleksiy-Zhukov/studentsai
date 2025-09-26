@@ -77,6 +77,7 @@ from .database import (
     archive_mastered_flashcards,
     PendingEmailChange,
     delete_note,
+    User
 )
 from .schemas import (
     UserCreate,
