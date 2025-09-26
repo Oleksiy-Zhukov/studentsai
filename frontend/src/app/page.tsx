@@ -73,11 +73,6 @@ export default function Home() {
         e.preventDefault()
         setShowTemplates(true)
       }
-      // ? for keyboard shortcuts help
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        setShowKeyboardShortcuts(true)
-      }
     }
 
     document.addEventListener('keydown', handleKeyDown)
@@ -254,13 +249,6 @@ export default function Home() {
                   <LayoutTemplate className="h-4 w-4 mr-1" />
                   Template
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleCreateNote}
-                  className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
             </div>
 
@@ -313,17 +301,6 @@ export default function Home() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {selectedNote && currentView === 'notes' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewFlashcards(selectedNote)}
-                    className="flex items-center space-x-1 border-gray-200 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:bg-[#0f1318] dark:hover:bg-[#1d2430]"
-                  >
-                    <img src="/icons/flashcards-icon.svg" alt="Flashcards" className="h-4 w-4" />
-                    <span>Generate Flashcards</span>
-                  </Button>
-                )}
                 <Button
                   variant="ghost"
                   size="sm"
