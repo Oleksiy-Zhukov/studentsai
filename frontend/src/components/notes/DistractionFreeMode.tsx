@@ -220,9 +220,9 @@ export function DistractionFreeMode({
 
   return (
     <div className={`fixed inset-0 z-50 ${isDarkMode ? 'dark' : ''}`}>
-      <div className={`h-full w-full ${isDarkMode ? 'bg-gray-900' : 'bg-white'} transition-colors`}>
+      <div className={`h-full w-full ${isDarkMode ? 'bg-[#0f1115]' : 'bg-gray-50'} transition-colors`}>
         {/* Top Bar */}
-        <div className={`h-12 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'} flex items-center justify-between px-4`}>
+        <div className={`h-12 border-b ${isDarkMode ? 'border-[#232a36] bg-[#0f1115]' : 'border-gray-200 bg-gray-50'} flex items-center justify-between px-4`}>
           <div className="flex items-center space-x-3">
             <Focus className="h-5 w-5 text-orange-500" />
             <span className="font-medium text-gray-900 dark:text-gray-100">Distraction-Free Mode</span>
@@ -316,7 +316,7 @@ export function DistractionFreeMode({
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className={`absolute top-12 right-4 z-10 w-64 p-4 rounded-lg shadow-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`absolute top-12 right-4 z-10 w-64 p-4 rounded-lg shadow-lg border ${isDarkMode ? 'bg-[#0f1115] border-[#232a36]' : 'bg-white border-gray-200'}`}>
             <div className="space-y-4">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">Writing Settings</h3>
               
@@ -400,8 +400,8 @@ export function DistractionFreeMode({
               placeholder="Note title..."
               className={`text-3xl font-semibold border-0 border-b rounded-none px-0 py-3 focus:ring-0 ${
                 isDarkMode 
-                  ? 'bg-gray-900 text-gray-100 border-gray-700 focus:border-gray-500' 
-                  : 'bg-white text-gray-900 border-gray-200 focus:border-gray-400'
+                  ? 'bg-[#0f1115] text-gray-100 border-[#232a36] focus:border-gray-500' 
+                  : 'bg-gray-50 text-gray-900 border-gray-200 focus:border-gray-400'
               }`}
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
